@@ -21,13 +21,24 @@ export const getCurrentUser = async (): Promise<UserProfile | null> => {
 };
 
 export const loginUser = async (emailOrVirtualEmail: string, passwordInput: string): Promise<UserProfile | null> => {
-  // 실제 환경에서는 Supabase Auth (signInWithPassword)를 사용해야 하지만, 
-  // 기존 가짜 패스워드 방식을 임시로 유지하려면 users 테이블에 password 칼럼이 있어야 합니다.
-  // 스키마에 없으므로 Supabase Auth를 통한 로그인이 필요하지만, 프론트엔드 마이그레이션 최소화를 위해 
-  // 여기서는 단순히 email 매칭만 임시로 처리합니다 (실무 보안상 위험).
+  // 1. Supabase Auth 로그인
+  // 가상 이메일이든 실제 이메일이든 로그인 시도 (우리는 virtualEmail로 가입시켰음)
+  const loginEmail = emailOrVirtualEmail.includes('@') ? emailOrVirtualEmail : `${emailOrVirtualEmail}@stopfive.com`;
+  
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email: loginEmail,
+    password: passwordInput,
+  });
+
+  if (authError || !authData.user) {
+    console.error('Login failed:', authError);
+    return null;
+  }
+
+  // 2. public.users 테이블에서 상세 정보 조회
   const { data, error } = await supabase.from('users')
     .select('*')
-    .or(`email.eq.${emailOrVirtualEmail},virtual_email.eq.${emailOrVirtualEmail}`)
+    .eq('id', authData.user.id)
     .single();
     
   if (error || !data) return null;
@@ -41,13 +52,22 @@ export const registerUser = async (
   deliveryTime: string,
   passwordInput: string
 ): Promise<UserProfile | null> => {
-  // Supabase Auth 연동이 필요하지만, 임시로 users 테이블에 직접 insert 시도
-  // 주의: RLS 정책상 auth.users에 없는 ID로 insert하면 실패할 수 있습니다. 
-  // 본 마이그레이션은 전체 구조(Auth 포함) 개편이 필요함을 보여주는 뼈대 코드입니다.
   const virtualEmail = `${username}@stopfive.com`;
   
+  // 1. Supabase Auth 회원가입 (실제 인증)
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: virtualEmail, // 가상 이메일을 로그인 ID로 사용
+    password: passwordInput,
+  });
+
+  if (authError || !authData.user) {
+    console.error('Auth Registration failed:', authError);
+    return null;
+  }
+
+  // 2. public.users 테이블에 상세 정보 저장
   const { data, error } = await supabase.from('users').insert([{
-    id: crypto.randomUUID(), // 원래는 auth.uid()
+    id: authData.user.id, // auth.users의 id와 매칭!
     name,
     email: actualEmail,
     virtual_email: virtualEmail,
@@ -55,7 +75,7 @@ export const registerUser = async (
   }]).select().single();
 
   if (error) {
-    console.error('Registration failed:', error);
+    console.error('DB Insert failed:', error);
     return null;
   }
   return mapUserFromDb(data);
