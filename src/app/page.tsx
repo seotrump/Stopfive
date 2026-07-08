@@ -17,7 +17,7 @@ import {
   simulateNextDayForUser,
   resetExperienceCourse,
   getAllUsers
-} from '../lib/mockDb';
+} from '../lib/db';
 
 export default function Home() {
   // 사용자 및 내비게이션 상태
@@ -30,6 +30,7 @@ export default function Home() {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isCourseGuideOpen, setIsCourseGuideOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
 
   // Compose 신규 메일 상태
   const [composeTo, setComposeTo] = useState('');
@@ -56,13 +57,24 @@ export default function Home() {
 
   // 초기 로딩
   useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-    }
-    setEmails(getLocalEmails());
-    setAllUsers(getAllUsers());
+    const fetchData = async () => {
+      const user = await getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        setEmails(await getLocalEmails(user.virtualEmail));
+      }
+      setAllUsers(await getAllUsers());
+    };
+    fetchData();
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      getStatsForUser(currentUser.virtualEmail).then(setStats);
+    } else {
+      setStats(null);
+    }
+  }, [currentUser]);
 
   // 토스트 도우미
   const triggerToast = (message: string, title?: string) => {
@@ -73,12 +85,12 @@ export default function Home() {
   };
 
   // 로그인 핸들러
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = loginUser(authEmail, authPassword);
+    const user = await loginUser(authEmail, authPassword);
     if (user) {
       setCurrentUser(user);
-      setEmails(getLocalEmails());
+      setEmails(await getLocalEmails(user.virtualEmail));
       triggerToast(`${user.name}님, 가상 메일함에 오신 것을 환영합니다!`, "로그인 성공");
       setAuthPassword('');
     } else {
@@ -87,14 +99,14 @@ export default function Home() {
   };
 
   // 회원가입 핸들러
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const username = authEmail.split('@')[0] || 'user';
-    const user = registerUser(authName, username, authEmail, authDeliveryTime, authPassword);
+    const user = await registerUser(authName, username, authEmail, authDeliveryTime, authPassword);
     if (user) {
       setCurrentUser(user);
-      setEmails(getLocalEmails());
-      setAllUsers(getAllUsers());
+      setEmails(await getLocalEmails(user.virtualEmail));
+      setAllUsers(await getAllUsers());
       triggerToast(`${user.name}님의 계정이 생성되었으며 @stopfive.com 가상 이메일이 부여되었습니다.`, "가입 완료");
       setAuthPassword('');
     } else {
@@ -103,8 +115,8 @@ export default function Home() {
   };
 
   // 로그아웃 핸들러
-  const handleLogout = () => {
-    logoutUser();
+  const handleLogout = async () => {
+    await logoutUser();
     setCurrentUser(null);
     setSelectedEmail(null);
     setUserTab('inbox');
@@ -112,15 +124,15 @@ export default function Home() {
   };
 
   // 답장 보내기 핸들러
-  const handleSendReply = (e: React.FormEvent) => {
+  const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim() || !selectedEmail) return;
+    if (!replyText.trim() || !selectedEmail || !currentUser) return;
 
-    const success = sendReply(selectedEmail.id, replyText);
+    const success = await sendReply(selectedEmail.id, replyText);
     if (success) {
       // 리스트 갱신 및 상태 동기화
-      setEmails(getLocalEmails());
-      const updatedUser = getCurrentUser();
+      setEmails(await getLocalEmails(currentUser.virtualEmail));
+      const updatedUser = await getCurrentUser();
       setCurrentUser(updatedUser);
       
       triggerToast("답장이 성공적으로 전송되어 약속이 보관함으로 옮겨졌습니다.", "답장 전송 완료");
@@ -130,12 +142,14 @@ export default function Home() {
   };
 
   // 관리자 전용: 특정 유저에게 다음 날 핑퐁 메일 수동 강제 전송 시뮬레이션
-  const handleAdminTriggerNextDay = (userVirtualEmail: string) => {
-    const updated = simulateNextDayForUser(userVirtualEmail);
+  const handleAdminTriggerNextDay = async (userVirtualEmail: string) => {
+    const updated = await simulateNextDayForUser(userVirtualEmail);
     if (updated) {
       // DB 상태 새로고침
-      setAllUsers(getAllUsers());
-      setEmails(getLocalEmails());
+      setAllUsers(await getAllUsers());
+      if (currentUser) {
+        setEmails(await getLocalEmails(currentUser.virtualEmail));
+      }
       triggerToast(`${updated.name}님에게 다음 5회 체험 미션 메일이 강제 발송되었습니다.`, "알림 메일 강제 트리거 성공");
     } else {
       triggerToast("코스가 완료되었거나 더 이상 발송할 미션이 없습니다.", "강제 발송 실패");
@@ -143,11 +157,12 @@ export default function Home() {
   };
 
   // 신규 메일 발송 핸들러
-  const handleSendCompose = (e: React.FormEvent) => {
+  const handleSendCompose = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = sendComposeMail(composeSubject, composeBody);
+    if (!currentUser) return;
+    const success = await sendComposeMail(currentUser.virtualEmail, composeSubject, composeBody);
     if (success) {
-      setEmails(getLocalEmails());
+      setEmails(await getLocalEmails(currentUser.virtualEmail));
       setIsComposeOpen(false);
       setComposeTo('');
       setComposeSubject('');
@@ -159,14 +174,13 @@ export default function Home() {
   };
 
   // 메일 읽기 선택 핸들러
-  const handleSelectEmail = (email: any) => {
-    // 읽음 처리 업데이트
-    const local = getLocalEmails();
+  const handleSelectEmail = async (email: any) => {
+    if (!currentUser) return;
+    const local = await getLocalEmails(currentUser.virtualEmail);
     const found = local.find((e: any) => e.id === email.id);
     if (found && found.status === 'unread' && found.receiver === currentUser.virtualEmail) {
       found.status = 'read';
-      // LocalStorage 저장
-      localStorage.setItem('stopfive_emails', JSON.stringify(local));
+      // TODO: db.ts 에 이메일 상태 업데이트 로직 추가 시 호출
       setEmails(local);
     }
     setSelectedEmail(email);
@@ -197,7 +211,6 @@ export default function Home() {
   };
 
   const userFiltered = getFilteredEmails();
-  const stats = currentUser ? getStatsForUser(currentUser.virtualEmail) : null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
@@ -930,11 +943,11 @@ export default function Home() {
 
               {/* 강제 리셋 은은한 점선 버튼 */}
               <button
-                onClick={() => {
-                  const updated = resetExperienceCourse(currentUser.virtualEmail);
+                onClick={async () => {
+                  const updated = await resetExperienceCourse(currentUser.virtualEmail);
                   if (updated) {
                     setCurrentUser(updated);
-                    setEmails(getLocalEmails());
+                    setEmails(await getLocalEmails(currentUser.virtualEmail));
                     triggerToast("5회 체험 코스가 초기화되었습니다.", "코스 리셋 완료");
                   }
                 }}
@@ -1110,10 +1123,10 @@ export default function Home() {
                       <div className="flex gap-2 w-full sm:w-auto justify-end">
                         {((currentUser.courseStep === 1) || (currentUser.courseStep === 3)) && (
                           <button
-                            onClick={() => {
-                              const mission = getNextCourseMission(currentUser.virtualEmail);
+                            onClick={async () => {
+                              const mission = await getNextCourseMission(currentUser.virtualEmail);
                               if (mission) {
-                                setEmails(getLocalEmails());
+                                setEmails(await getLocalEmails(currentUser.virtualEmail));
                                 triggerToast("체험 코스 다음 미션 도착!", "새 메일 확인");
                               }
                             }}
@@ -1125,13 +1138,13 @@ export default function Home() {
 
                         {((currentUser.courseStep === 2) || (currentUser.courseStep === 4)) && (
                           <button
-                            onClick={() => {
-                              const updated = simulateNextDayForUser(currentUser.virtualEmail);
+                            onClick={async () => {
+                              const updated = await simulateNextDayForUser(currentUser.virtualEmail);
                               if (updated) {
                                 setCurrentUser(updated);
-                                const nextMission = getNextCourseMission(updated.virtualEmail);
+                                const nextMission = await getNextCourseMission(updated.virtualEmail);
                                 if (nextMission) {
-                                  setEmails(getLocalEmails());
+                                  setEmails(await getLocalEmails(updated.virtualEmail));
                                   triggerToast("가상으로 하루가 경과하여 다음 날짜 미션이 전송되었습니다.", "하루 지나기 완료");
                                 }
                               }
@@ -1231,7 +1244,7 @@ export default function Home() {
                   <div className="bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl">
                     <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Inbox History (Recent 14 Days)</h3>
                     <div className="grid grid-cols-7 sm:grid-cols-14 gap-3">
-                      {stats?.completionRateByDay.map((day) => {
+                      {stats?.completionRateByDay?.map((day: any) => {
                         const dateObj = new Date(day.date);
                         const dayLabel = dateObj.toLocaleDateString([], { month: 'numeric', day: 'numeric' });
                         return (
@@ -1354,7 +1367,7 @@ export default function Home() {
                     <p className="text-sm text-slate-400 mt-1">개인 편지함 수신 시간 및 프로필을 변경합니다.</p>
                   </div>
 
-                  <form onSubmit={(e) => {
+                  <form onSubmit={async (e) => {
                     e.preventDefault();
                     const form = e.currentTarget;
                     const deliveryTime = (form.elements.namedItem('deliveryTime') as HTMLInputElement).value;
@@ -1365,10 +1378,10 @@ export default function Home() {
                       return;
                     }
                     
-                    const updated = updateUserProfile(currentUser.virtualEmail, deliveryTime, name, settingsNewPassword || undefined);
+                    const updated = await updateUserProfile(currentUser.virtualEmail, deliveryTime, name, settingsNewPassword || undefined);
                     if (updated) {
                       setCurrentUser(updated);
-                      setAllUsers(getAllUsers());
+                      setAllUsers(await getAllUsers());
                       triggerToast("Settings saved successfully.");
                       setSettingsNewPassword('');
                       setSettingsConfirmPassword('');
