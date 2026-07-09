@@ -16,14 +16,46 @@ import {
   getNextCourseMission,
   simulateNextDayForUser,
   resetExperienceCourse,
-  getAllUsers
+  getAllUsers,
+  getScheduledEmails,
+  createScheduledEmail,
+  cancelScheduledEmail,
+  markEmailAsArchived
 } from '../lib/db';
+const ITEMS_PER_PAGE = 20;
+
+const Pagination = ({ total, current, onChange }: { total: number, current: number, onChange: (p: number) => void }) => {
+  const maxPage = Math.ceil(total / ITEMS_PER_PAGE);
+  if (maxPage <= 1) return null;
+  const pages = Array.from({length: maxPage}, (_, i) => i + 1);
+  return (
+    <div className="flex items-center justify-center space-x-2 py-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0">
+      <button onClick={() => onChange(1)} disabled={current === 1} className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+      </button>
+      <button onClick={() => onChange(current - 1)} disabled={current === 1} className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+      </button>
+      {pages.map(p => (
+        <button key={p} onClick={() => onChange(p)} className={`w-7 h-7 flex items-center justify-center rounded text-[13px] font-medium transition-all ${p === current ? 'bg-white border border-[#1A73E8] text-[#1A73E8]' : 'text-slate-600 hover:bg-slate-100'}`}>
+          {p}
+        </button>
+      ))}
+      <button onClick={() => onChange(current + 1)} disabled={current === maxPage} className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+      </button>
+      <button onClick={() => onChange(maxPage)} disabled={current === maxPage} className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+      </button>
+    </div>
+  );
+};
 
 export default function Home() {
   // 사용자 및 내비게이션 상태
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userTab, setUserTab] = useState<'inbox' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose'>('inbox');
-  const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose'>('users');
+  const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose' | 'scheduled' | 'scheduled-manage' | 'inbox' | 'sent' | 'archive' | 'settings'>('users');
   const [emails, setEmails] = useState<any[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
   const [replyText, setReplyText] = useState('');
@@ -37,9 +69,23 @@ export default function Home() {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
 
+  // 예약 메일 상태
+  const [scheduledEmails, setScheduledEmails] = useState<any[]>([]);
+  const [scheduledTo, setScheduledTo] = useState('');
+  const [scheduledSubject, setScheduledSubject] = useState('');
+  const [scheduledBody, setScheduledBody] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
+
   // 설정 폼 상태
   const [settingsNewPassword, setSettingsNewPassword] = useState('');
   const [settingsConfirmPassword, setSettingsConfirmPassword] = useState('');
+
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [adminTab, userTab]);
 
   // 로그인/회원가입 폼 상태
   const [authMode, setAuthMode] = useState<'home' | 'login' | 'register'>('home');
@@ -76,12 +122,15 @@ export default function Home() {
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    if (adminTab === 'scheduled' || adminTab === 'scheduled-manage') {
+      getScheduledEmails().then(setScheduledEmails);
+    }
+  }, [adminTab]);
+
   // 토스트 도우미
   const triggerToast = (message: string, title?: string) => {
-    setToast({ show: true, message, title });
-    setTimeout(() => {
-      setToast(prev => ({ ...prev, show: false }));
-    }, 4000);
+    // 말풍선(Toast) 알림 UI를 모두 제거해달라는 요청에 따라 비활성화
   };
 
   // 로그인 핸들러
@@ -91,10 +140,7 @@ export default function Home() {
     if (user) {
       setCurrentUser(user);
       setEmails(await getLocalEmails(user.virtualEmail));
-      triggerToast(`${user.name}님, 가상 메일함에 오신 것을 환영합니다!`, "로그인 성공");
       setAuthPassword('');
-    } else {
-      triggerToast("이메일 또는 비밀번호를 다시 확인해 주세요.", "로그인 실패");
     }
   };
 
@@ -107,10 +153,7 @@ export default function Home() {
       setCurrentUser(user);
       setEmails(await getLocalEmails(user.virtualEmail));
       setAllUsers(await getAllUsers());
-      triggerToast(`${user.name}님의 계정이 생성되었으며 @stopfive.com 가상 이메일이 부여되었습니다.`, "가입 완료");
       setAuthPassword('');
-    } else {
-      triggerToast("이미 가입된 일반 이메일이거나 가입에 실패했습니다.", "회원가입 오류");
     }
   };
 
@@ -120,7 +163,6 @@ export default function Home() {
     setCurrentUser(null);
     setSelectedEmail(null);
     setUserTab('inbox');
-    triggerToast("성공적으로 로그아웃되었습니다.");
   };
 
   // 답장 보내기 핸들러
@@ -160,10 +202,21 @@ export default function Home() {
   const handleSendCompose = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
-    const success = await sendComposeMail(currentUser.virtualEmail, composeSubject, composeBody);
+    
+    let success = false;
+    if (currentUser.role === 'admin') {
+      success = await sendAdminMailToUser(composeTo, composeSubject, composeBody);
+    } else {
+      success = await sendComposeMail(currentUser.virtualEmail, composeSubject, composeBody);
+    }
+
     if (success) {
       setEmails(await getLocalEmails(currentUser.virtualEmail));
       setIsComposeOpen(false);
+      if (currentUser.role === 'admin' && adminTab === 'compose') {
+        setAdminTab('sent');
+        setSelectedEmail(null);
+      }
       setComposeTo('');
       setComposeSubject('');
       setComposeBody('');
@@ -179,11 +232,11 @@ export default function Home() {
     const local = await getLocalEmails(currentUser.virtualEmail);
     const found = local.find((e: any) => e.id === email.id);
     if (found && found.status === 'unread' && found.receiver === currentUser.virtualEmail) {
-      found.status = 'read';
-      // TODO: db.ts 에 이메일 상태 업데이트 로직 추가 시 호출
+      found.status = 'archived';
+      await markEmailAsArchived(found.id);
       setEmails(local);
     }
-    setSelectedEmail(email);
+    setSelectedEmail({ ...email, status: found ? found.status : email.status });
   };
 
   // 메일 탭 필터링
@@ -212,6 +265,14 @@ export default function Home() {
 
   const userFiltered = getFilteredEmails();
 
+  // -- 관리자 모드 필터링 데이터 (페이지네이션용) --
+  const adminFilteredEmails = emails.filter((e: any) => {
+    if (adminTab === 'inbox') return e.receiver === currentUser?.virtualEmail && e.status !== 'archived';
+    if (adminTab === 'sent') return e.sender === currentUser?.virtualEmail;
+    if (adminTab === 'archive') return e.receiver === currentUser?.virtualEmail && e.status === 'archived';
+    return true;
+  });
+  const adminUsersList = allUsers.filter(u => u.role !== 'admin');
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       
@@ -539,48 +600,138 @@ export default function Home() {
               </button>
 
               {/* Compose 신규 메일 쓰기 버튼 (수동 시스템 발송용 모달) */}
-              <div className="px-1.5">
+              <div className="mb-4">
                 <button
-                  onClick={() => setAdminTab('compose')}
-                  className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-sm text-[#202124] dark:text-white font-bold rounded-full text-xs transition-all flex items-center justify-center space-x-2 shadow-sm"
+                  onClick={() => { setAdminTab('compose'); setSelectedEmail(null); }}
+                  className="ml-2 pl-4 pr-6 py-4 bg-[#C2E7FF] hover:bg-[#A8D4F7] text-[#001D35] font-bold rounded-2xl text-[14px] transition-all flex items-center space-x-4 shadow-sm w-fit"
                 >
-                  <svg className="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
-                  <span>메일 발송 시뮬</span>
+                  <span>미션 발송</span>
                 </button>
               </div>
 
-              {/* 네비게이션 메뉴 */}
-              <nav className="space-y-1 px-1.5">
+              {/* 네비게이션 메뉴 (9개 통합 항목) */}
+              <nav className="space-y-0.5">
                 <button
-                  onClick={() => setAdminTab('users')}
-                  className={`w-full flex items-center justify-between px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
-                    adminTab === 'users' 
-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
+                  onClick={() => { setAdminTab('inbox'); setSelectedEmail(null); }}
+                  className={`w-[calc(100%-16px)] flex items-center justify-between pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                    adminTab === 'inbox' 
+                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <div className="flex items-center space-x-4">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0V9a2 2 0 00-2-2H6a2 2 0 00-2 2v4m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2" />
                     </svg>
-                    <span>가입 유저 현황</span>
+                    <span>받은편지함</span>
                   </div>
+                  {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived').length > 0 && (
+                    <span className="text-[#1A73E8] dark:text-blue-400 text-xs font-bold px-1">
+                      {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived').length}
+                    </span>
+                  )}
                 </button>
 
                 <button
-                  onClick={() => setAdminTab('statistics')}
-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
-                    adminTab === 'statistics' 
-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
+                  onClick={() => { setAdminTab('sent'); setSelectedEmail(null); }}
+                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                    adminTab === 'sent' 
+                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  <span>보낸편지함</span>
+                </button>
+
+                <button
+                  onClick={() => { setAdminTab('archive'); setSelectedEmail(null); }}
+                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                    adminTab === 'archive' 
+                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                  <span>수신보관함</span>
+                </button>
+
+                <button
+                  onClick={() => { setAdminTab('users'); setSelectedEmail(null); }}
+                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                    adminTab === 'users' 
+                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>유저 현황</span>
+                </button>
+                
+                <button
+                  onClick={() => { setAdminTab('statistics'); setSelectedEmail(null); }}
+                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                    adminTab === 'statistics' 
+                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
                   </svg>
-                  <span>종합 통계 리포트</span>
+                  <span>통계 관리</span>
+                </button>
+
+                <button
+                  onClick={() => { setAdminTab('scheduled'); setSelectedEmail(null); }}
+                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                    adminTab === 'scheduled' 
+                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>미션 예약</span>
+                </button>
+
+                <button
+                  onClick={() => { setAdminTab('scheduled-manage'); setSelectedEmail(null); }}
+                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                    adminTab === 'scheduled-manage' 
+                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <span>예약 미션 관리</span>
+                </button>
+
+                <button
+                  onClick={() => { setAdminTab('settings'); setSelectedEmail(null); }}
+                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                    adminTab === 'settings' 
+                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>환경 설정</span>
                 </button>
               </nav>
             </div>
@@ -614,68 +765,193 @@ export default function Home() {
 
             {/* 탭 전환 뷰 */}
             <main className="flex-1 overflow-y-auto p-8 max-w-6xl w-full mx-auto space-y-8">
-              {adminTab === 'users' ? (
-                /* 가입 유저 목록 테이블 */
-                <div className="space-y-6">
+              {selectedEmail ? (
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8 min-h-[calc(100vh-56px)]">
+                  <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
+                    <button 
+                      onClick={() => setSelectedEmail(null)}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
+                    >
+                      <span>← Back to {adminTab}</span>
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                    <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <h2 className="text-2xl font-bold tracking-tight text-[#202124] dark:text-white leading-tight">
+                          {selectedEmail.subject}
+                        </h2>
+                        <span className="px-2 py-0.5 bg-[#f1f3f4] dark:bg-slate-800 text-[#5f6368] dark:text-slate-450 text-[10px] font-medium rounded border border-slate-200 dark:border-slate-700">
+                          {adminTab}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                            {(selectedEmail.sender[0] || 'U').toUpperCase()}
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="text-[13px] text-[#202124] dark:text-white">
+                              <span className="font-bold">{selectedEmail.sender.split('@')[0]}</span>
+                              <span className="text-slate-400 text-xs font-light ml-2">&lt;{selectedEmail.sender}&gt;</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400">
+                              <span>To: </span>
+                              <span className="font-medium text-slate-650 dark:text-slate-350">{selectedEmail.receiver}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          {new Date(selectedEmail.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-[#202124] dark:text-slate-100 font-normal">
+                      {selectedEmail.body}
+                    </div>
+                  </div>
+                </div>
+              ) : adminTab === 'inbox' || adminTab === 'sent' || adminTab === 'archive' ? (
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8 h-[calc(100vh-56px)]">
+                  <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">
+                      {adminTab === 'inbox' ? '받은편지함' : adminTab === 'sent' ? '보낸편지함' : '수신보관함'}
+                    </span>
+                  </div>
+                  {/* 상단 고정 리스트 헤더 */}
+                  <div className="flex items-center px-4 h-8 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                    <div className="w-12 flex justify-center shrink-0"><input type="checkbox" className="w-3 h-3 rounded border-slate-300" /></div>
+                    <div className="w-40 shrink-0 pl-2">보낸사람 / 받는사람</div>
+                    <div className="flex-1 min-w-0 pl-2">제목 및 내용</div>
+                    <div className="w-24 text-right shrink-0">날짜</div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {adminFilteredEmails.length === 0 ? (
+                        <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                          <p className="text-sm font-medium">No messages found</p>
+                        </div>
+                      ) : adminFilteredEmails.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((email: any) => {
+                        const isUnread = email.status === 'unread' && email.receiver === currentUser.virtualEmail;
+                        return (
+                          <div
+                            key={email.id}
+                            onClick={() => handleSelectEmail(email)}
+                            className={`h-8 flex items-center px-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-all ${
+                              isUnread ? 'bg-white dark:bg-slate-900' : 'bg-[#F2F5F9]/40 dark:bg-slate-850/10'
+                            }`}
+                          >
+                            <div className="w-12 flex justify-center shrink-0">
+                               <input type="checkbox" className="w-3 h-3 rounded border-slate-300" onClick={(e) => e.stopPropagation()} />
+                            </div>
+                            <div className="w-40 shrink-0 pl-2 truncate text-xs">
+                              <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
+                                {adminTab === 'sent' ? email.receiver.split('@')[0] : email.sender.split('@')[0]}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0 flex items-center space-x-2 pl-2 text-xs">
+                              <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}>
+                                {email.subject}
+                              </span>
+                              <span className="text-slate-400 truncate font-light">— {email.body}</span>
+                            </div>
+                            <div className="w-24 text-right shrink-0 text-[11px]">
+                              <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
+                                {new Date(email.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                  <Pagination total={adminFilteredEmails.length} current={currentPage} onChange={setCurrentPage} />
+                </div>
+              ) : adminTab === 'settings' ? (
+                <div className="space-y-8 max-w-2xl">
                   <div>
-                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">가입 유저 현황 관리</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">서비스에 가입된 가상 메일 사용자의 체험 진행도 조회 및 메일 발송 강제 제어</p>
+                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">환경 설정</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">관리자 계정의 보안 및 서비스 환경을 설정합니다.</p>
                   </div>
-
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-none">
-                    <table className="w-full text-left border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-slate-50 dark:bg-slate-850 text-slate-500 border-b border-slate-200 dark:border-slate-850 font-bold text-xs uppercase">
-                          <th className="p-4 pl-6">사용자명</th>
-                          <th className="p-4">가입 이메일</th>
-                          <th className="p-4">가상 이메일</th>
-                          <th className="p-4">수신 희망시간</th>
-                          <th className="p-4">체험 진행률</th>
-                          <th className="p-4 text-right pr-6">핑퐁 시뮬레이션</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {allUsers.map((user) => {
-                          const isFinished = user.courseStatus === 'completed';
-                          const stepPercent = Math.min(100, Math.round((user.courseStep / 5) * 100));
-                          
-                          return (
-                            <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 text-[#202124] dark:text-slate-200">
-                              <td className="p-4 pl-6 font-bold">{user.name}</td>
-                              <td className="p-4 text-xs font-light text-slate-500">{user.email}</td>
-                              <td className="p-4 text-xs font-semibold text-[#0b57d0] dark:text-blue-400">{user.virtualEmail}</td>
-                              <td className="p-4 font-mono text-xs">{user.deliveryTime}</td>
-                              <td className="p-4">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-24 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                    <div 
-                                      className={`h-full ${isFinished ? 'bg-emerald-500' : 'bg-slate-600'}`}
-                                      style={{ width: `${stepPercent}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-xs font-bold">
-                                    {user.courseStep}회차 ({stepPercent}%)
-                                  </span>
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-6">
+                    <h2 className="text-lg font-bold text-[#202124] dark:text-white">비밀번호 변경</h2>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      triggerToast("비밀번호가 성공적으로 변경되었습니다.", "변경 완료");
+                      (e.target as HTMLFormElement).reset();
+                    }} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 block">현재 비밀번호</label>
+                        <input type="password" required className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-blue-500 text-sm dark:bg-slate-800" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 block">새 비밀번호</label>
+                        <input type="password" required className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-blue-500 text-sm dark:bg-slate-800" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 block">새 비밀번호 확인</label>
+                        <input type="password" required className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-1 focus:ring-blue-500 text-sm dark:bg-slate-800" />
+                      </div>
+                      <button type="submit" className="px-6 py-2 bg-[#1a73e8] hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all">비밀번호 저장</button>
+                    </form>
+                  </div>
+                </div>
+              ) : adminTab === 'users' ? (
+                /* 가입 유저 목록 테이블 */
+                <div className="bg-white dark:bg-slate-900 overflow-hidden shadow-none">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className="text-slate-500 border-b border-slate-200 dark:border-slate-850 text-xs">
+                        <th className="p-4 pl-6 w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" /></th>
+                        <th className="p-4">사용자명</th>
+                        <th className="p-4">가입 이메일</th>
+                        <th className="p-4">가상 이메일</th>
+                        <th className="p-4">희망시간</th>
+                        <th className="p-4">진행률</th>
+                        <th className="p-4 text-right pr-6">시뮬레이션</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {adminUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((user) => {
+                        const isFinished = user.courseStatus === 'completed';
+                        const stepPercent = Math.min(100, Math.round((user.courseStep / 5) * 100));
+                        
+                        return (
+                          <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 text-[#202124] dark:text-slate-200">
+                            <td className="p-4 pl-6"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" /></td>
+                            <td className="p-4 font-bold">{user.name}</td>
+                            <td className="p-4 text-xs font-light text-slate-500">{user.email}</td>
+                            <td className="p-4 text-xs font-semibold text-[#1A73E8] dark:text-blue-400">{user.virtualEmail}</td>
+                            <td className="p-4 font-mono text-xs text-slate-500">{user.deliveryTime}</td>
+                            <td className="p-4">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-24 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full ${isFinished ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                                    style={{ width: `${stepPercent}%` }}
+                                  />
                                 </div>
-                              </td>
-                              <td className="p-4 text-right pr-6">
-                                {isFinished ? (
-                                  <span className="text-xs font-bold text-emerald-600">체험 완료</span>
-                                ) : (
-                                  <button
-                                    onClick={() => handleAdminTriggerNextDay(user.virtualEmail)}
-                                    className="px-3.5 py-1.5 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white border border-slate-300 dark:border-slate-750 font-bold rounded-full text-xs transition-all shadow-none"
-                                  >
-                                    다음 메일 발송 ⚡
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                <span className="text-xs font-medium text-slate-500">
+                                  {user.courseStep}회차 ({stepPercent}%)
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-4 text-right pr-6">
+                              {isFinished ? (
+                                <span className="text-xs font-bold text-emerald-600">체험 완료</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleAdminTriggerNextDay(user.virtualEmail)}
+                                  className="text-[12px] font-medium text-blue-600 hover:text-blue-800 flex items-center justify-end gap-1 ml-auto"
+                                >
+                                  다음 발송 ⚡
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <Pagination total={adminUsersList.length} current={currentPage} onChange={setCurrentPage} />
                 </div>
               ) : adminTab === 'compose' ? (
                 /* 어드민 편지쓰기 - 이용자 편지쓰기 포맷과 완전히 통일 */
@@ -683,7 +959,7 @@ export default function Home() {
                   {/* 이메일 상세 보기와 동일한 상단 Back 바 */}
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
                     <button
-                      onClick={() => setAdminTab('users')}
+                      onClick={() => { setAdminTab('users'); setSelectedEmail(null); }}
                       className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
                     >
                       <span>← Back to users</span>
@@ -787,6 +1063,188 @@ export default function Home() {
                     </form>
                   </div>
                 </div>
+              ) : adminTab === 'scheduled' ? (
+                /* 미션 예약 (예약 발송 등록) */
+                <div className="space-y-6 max-w-4xl">
+                  <div>
+                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">미션 예약</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">지정된 날짜와 시간에 특정 유저에게 메일을 예약 발송합니다.</p>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8">
+                    <form onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!scheduledTo || !scheduledSubject || !scheduledBody || !scheduledDate || !scheduledTime) {
+                        triggerToast("모든 항목을 입력해주세요.", "입력 오류");
+                        return;
+                      }
+                      
+                      const scheduleDateStr = `${scheduledDate}T${scheduledTime}:00`;
+                      const targetUser = allUsers.find(u => u.virtualEmail === scheduledTo);
+                      const receiverName = targetUser ? targetUser.name : 'Unknown';
+
+                      const success = await createScheduledEmail(
+                        scheduledTo,
+                        receiverName,
+                        scheduledSubject,
+                        scheduledBody,
+                        scheduleDateStr
+                      );
+                      
+                      if (success) {
+                        triggerToast("예약 메일이 등록되었습니다.", "예약 완료");
+                        setScheduledTo('');
+                        setScheduledSubject('');
+                        setScheduledBody('');
+                        setScheduledDate('');
+                        setScheduledTime('09:00');
+                        setAdminTab('scheduled-manage');
+                        setSelectedEmail(null);
+                      } else {
+                        triggerToast("예약 등록에 실패했습니다. (DB 오류)", "예약 실패");
+                      }
+                    }} className="space-y-6">
+                      
+                      {/* 수신자 */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">발송 대상</label>
+                        <select
+                          value={scheduledTo}
+                          onChange={(e) => setScheduledTo(e.target.value)}
+                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                          required
+                        >
+                          <option value="">발송 대상 유저 선택</option>
+                          {allUsers.filter(u => u.role !== 'admin').map(u => (
+                            <option key={u.id} value={u.virtualEmail}>{u.name} ({u.virtualEmail})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* 예약 날짜 */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 날짜</label>
+                          <input
+                            type="date"
+                            value={scheduledDate}
+                            onChange={(e) => setScheduledDate(e.target.value)}
+                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                            required
+                          />
+                        </div>
+
+                        {/* 예약 시간 */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 시간</label>
+                          <input
+                            type="time"
+                            value={scheduledTime}
+                            onChange={(e) => setScheduledTime(e.target.value)}
+                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* 제목 */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">제목</label>
+                        <input
+                          type="text"
+                          value={scheduledSubject}
+                          onChange={(e) => setScheduledSubject(e.target.value)}
+                          placeholder="이메일 제목을 입력하세요"
+                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                          required
+                        />
+                      </div>
+
+                      {/* 본문 */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">WRITE MESSAGE (본문 내용)</label>
+                        <textarea
+                          value={scheduledBody}
+                          onChange={(e) => setScheduledBody(e.target.value)}
+                          placeholder="본문 내용을 자유롭게 작성하세요..."
+                          className="w-full h-40 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
+                          required
+                        />
+                      </div>
+
+                      <div className="flex justify-start">
+                        <button
+                          type="submit"
+                          className="px-6 py-2 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white border border-slate-300 dark:border-slate-700 font-bold rounded-full text-xs transition-all shadow-none flex items-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>예약 등록</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              ) : adminTab === 'scheduled-manage' ? (
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8 h-[calc(100vh-56px)]">
+                  <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">예약 미션 관리</span>
+                  </div>
+                  {/* 상단 고정 리스트 헤더 */}
+                  <div className="flex items-center px-4 h-8 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                    <div className="w-20 shrink-0 pl-2">상태</div>
+                    <div className="w-28 shrink-0 pl-2">예약일시</div>
+                    <div className="w-40 shrink-0 pl-2">수신자</div>
+                    <div className="flex-1 min-w-0 pl-2">제목</div>
+                    <div className="w-16 text-right shrink-0">관리</div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {scheduledEmails.length === 0 ? (
+                      <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                        <p className="text-sm font-medium">현재 등록된 예약 메일이 없습니다.</p>
+                      </div>
+                    ) : (
+                      scheduledEmails.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((se) => (
+                        <div key={se.id} className="h-8 flex items-center px-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-xs">
+                          <div className="w-20 shrink-0 pl-2 font-bold">
+                            <span className={se.status === 'pending' ? 'text-amber-600' : se.status === 'sent' ? 'text-emerald-600' : 'text-slate-500'}>
+                              {se.status === 'pending' ? '발송 대기' : se.status === 'sent' ? '발송 완료' : '취소됨'}
+                            </span>
+                          </div>
+                          <div className="w-28 shrink-0 pl-2 text-slate-500 truncate">
+                            {new Date(se.scheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          </div>
+                          <div className="w-40 shrink-0 pl-2 font-medium text-slate-700 dark:text-slate-300 truncate">
+                            {se.receiverVirtualEmail ? se.receiverVirtualEmail.split('@')[0] : '알수없음'}
+                          </div>
+                          <div className="flex-1 min-w-0 pl-2 text-slate-800 dark:text-slate-200 truncate font-medium">
+                            {se.subject}
+                          </div>
+                          <div className="w-16 text-right shrink-0">
+                            {se.status === 'pending' && (
+                              <button
+                                onClick={async () => {
+                                  if (confirm("이 예약 메일 발송을 취소하시겠습니까?")) {
+                                    const success = await cancelScheduledEmail(se.id);
+                                    if (success) {
+                                      triggerToast("예약이 취소되었습니다.", "취소 완료");
+                                      setScheduledEmails(await getScheduledEmails());
+                                    }
+                                  }
+                                }}
+                                className="text-[11px] font-bold text-red-500 hover:text-red-700"
+                              >
+                                발송 취소
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <Pagination total={scheduledEmails.length} current={currentPage} onChange={setCurrentPage} />
+                </div>
               ) : (
                 /* 종합 통계 탭 */
                 <div className="space-y-6">
@@ -832,12 +1290,12 @@ export default function Home() {
               </button>
 
               {/* Compose 신규 메일 쓰기 버튼 (지메일 스타일 - 색상 배제 및 은은한 보더형) */}
-              <div className="px-1.5">
+              <div className="px-1.5 mt-2 mb-2">
                 <button
                   onClick={() => { setSelectedEmail(null); setUserTab('compose'); }}
-                  className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-sm text-[#202124] dark:text-white font-bold rounded-full text-xs transition-all flex items-center justify-center space-x-2 shadow-sm"
+                  className="ml-3 pl-3 pr-6 py-4 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-medium rounded-2xl text-[14px] transition-all flex items-center space-x-3 shadow-sm w-fit"
                 >
-                  <svg className="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                   <span>편지쓰기</span>
@@ -845,13 +1303,13 @@ export default function Home() {
               </div>
 
               {/* 네비게이션 메뉴 (흑백 아이콘 및 100% 한글 명칭 통일) */}
-              <nav className="space-y-1 px-1.5">
+              <nav className="space-y-0 px-1.5">
                 <button
                   onClick={() => { setUserTab('inbox'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center justify-between px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
+                  className={`w-full flex items-center justify-between px-6 h-10 rounded-full text-[14px] transition-all ${
                     userTab === 'inbox' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
@@ -869,24 +1327,24 @@ export default function Home() {
 
                 <button
                   onClick={() => { setUserTab('archive'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
+                  className={`w-full flex items-center px-6 h-10 rounded-full text-[14px] transition-all ${
                     userTab === 'archive' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                   </svg>
-                  <span>보관함</span>
+                  <span>수신보관함</span>
                 </button>
 
                 <button
                   onClick={() => { setUserTab('sent'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
+                  className={`w-full flex items-center px-6 h-10 rounded-full text-[14px] transition-all ${
                     userTab === 'sent' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -897,10 +1355,10 @@ export default function Home() {
 
                 <button
                   onClick={() => { setUserTab('statistics'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
+                  className={`w-full flex items-center px-6 h-10 rounded-full text-[14px] transition-all ${
                     userTab === 'statistics' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -911,10 +1369,10 @@ export default function Home() {
 
                 <button
                   onClick={() => { setUserTab('settings'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
+                  className={`w-full flex items-center px-6 h-10 rounded-full text-[14px] transition-all ${
                     userTab === 'settings' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1053,7 +1511,7 @@ export default function Home() {
                     </div>
 
                     {/* 미답장 미션 메일인 경우 대형 답장창 제공 */}
-                    {selectedEmail.receiver === currentUser.virtualEmail && selectedEmail.status !== 'archived' && (
+                    {selectedEmail.receiver === currentUser.virtualEmail && !selectedEmail.replyContent && (
                       <form onSubmit={handleSendReply} className="border-t border-slate-100 dark:border-slate-850 pt-6 space-y-4">
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
@@ -1479,7 +1937,7 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {userFiltered.map((email) => {
+                        {userFiltered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((email) => {
                           const isUnread = email.status === 'unread' && email.receiver === currentUser.virtualEmail;
                           return (
                             <div
@@ -1500,7 +1958,9 @@ export default function Home() {
 
                               <div className="w-40 shrink-0 pr-4 truncate text-sm">
                                 <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
-                                  {email.sender === 'team@stopfive.com' ? 'StopFive Team' : email.sender.split('@')[0]}
+                                  {userTab === 'sent' 
+                                    ? (email.receiver === 'team@stopfive.com' ? 'StopFive Team' : email.receiver.split('@')[0])
+                                    : (email.sender === 'team@stopfive.com' ? 'StopFive Team' : email.sender.split('@')[0])}
                                 </span>
                               </div>
                               <div className="flex-1 min-w-0 flex items-center space-x-2 pr-6 text-sm">
@@ -1520,6 +1980,7 @@ export default function Home() {
                       </div>
                     )}
                   </div>
+                  <Pagination total={userFiltered.length} current={currentPage} onChange={setCurrentPage} />
                 </div>
               )}
             </main>

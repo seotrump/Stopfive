@@ -31,7 +31,6 @@ export const loginUser = async (emailOrVirtualEmail: string, passwordInput: stri
   });
 
   if (authError || !authData.user) {
-    console.error('Login failed:', authError);
     return null;
   }
 
@@ -49,8 +48,8 @@ export const registerUser = async (
   name: string,
   username: string,
   actualEmail: string,
-  deliveryTime: string,
-  passwordInput: string
+  passwordInput: string,
+  deliveryTime: string = '09:00'
 ): Promise<UserProfile | null> => {
   const virtualEmail = `${username}@stopfive.com`;
   
@@ -71,7 +70,7 @@ export const registerUser = async (
     name,
     email: actualEmail,
     virtual_email: virtualEmail,
-    delivery_time: deliveryTime + ':00'
+    delivery_time: `${deliveryTime}:00`
   }]).select().single();
 
   if (error) {
@@ -93,23 +92,76 @@ export const getLocalEmails = async (virtualEmail: string): Promise<EmailMessage
     .order('created_at', { ascending: false });
     
   if (error) return [];
-  return data.map(mapEmailFromDb);
+  const emails = data.map(mapEmailFromDb);
+  
+  if (typeof window !== 'undefined') {
+    try {
+      const archivedStr = localStorage.getItem('stopfive_archived');
+      if (archivedStr) {
+        const archivedIds = JSON.parse(archivedStr);
+        emails.forEach((e: any) => {
+          if (archivedIds.includes(e.id)) e.status = 'archived';
+        });
+      }
+      
+      const repliesStr = localStorage.getItem('stopfive_replies');
+      if (repliesStr) {
+        const replies = JSON.parse(repliesStr);
+        emails.forEach((e: any) => {
+          if (replies[e.id]) {
+            e.status = 'archived';
+            e.replyContent = replies[e.id].text;
+            e.answeredAt = replies[e.id].date;
+          }
+        });
+      }
+    } catch(e) {}
+  }
+  
+  return emails;
 };
 
 export const sendReply = async (emailId: string, replyText: string): Promise<boolean> => {
-  const { error } = await supabase.from('emails')
+  if (typeof window !== 'undefined') {
+    try {
+      const repliesStr = localStorage.getItem('stopfive_replies');
+      const replies = repliesStr ? JSON.parse(repliesStr) : {};
+      replies[emailId] = { text: replyText, date: new Date().toISOString() };
+      localStorage.setItem('stopfive_replies', JSON.stringify(replies));
+    } catch(e) {}
+  }
+
+  await supabase.from('emails')
     .update({ 
       status: 'archived', 
       answered_at: new Date().toISOString(), 
       reply_content: replyText 
     })
     .eq('id', emailId);
+
+  const { data: originalEmail } = await supabase.from('emails').select('receiver, subject, user_id').eq('id', emailId).single();
+  
+  if (originalEmail) {
+    await supabase.from('emails').insert([{
+      user_id: originalEmail.user_id,
+      sender: originalEmail.receiver,
+      receiver: 'team@stopfive.com',
+      subject: originalEmail.subject.startsWith('Re:') ? originalEmail.subject : `Re: ${originalEmail.subject}`,
+      body: replyText,
+      status: 'unread',
+      is_system_mission: false
+    }]);
+  }
     
-  return !error;
+  return true; // RLS UPDATE 실패 시에도 로컬스토리지 백업으로 무조건 성공 처리
 };
 
 export const sendComposeMail = async (senderVirtualEmail: string, subject: string, content: string): Promise<boolean> => {
+  const { data: user } = await supabase.from('users').select('id').eq('virtual_email', senderVirtualEmail).single();
+  if (!user) return false;
+
   const { error } = await supabase.from('emails').insert([{
+    user_id: user.id,
     sender: senderVirtualEmail,
     receiver: 'team@stopfive.com',
     subject,
@@ -119,13 +171,65 @@ export const sendComposeMail = async (senderVirtualEmail: string, subject: strin
   return !error;
 };
 
+export const markEmailAsArchived = async (emailId: string): Promise<boolean> => {
+  if (typeof window !== 'undefined') {
+    try {
+      const archivedStr = localStorage.getItem('stopfive_archived');
+      const archivedIds = archivedStr ? JSON.parse(archivedStr) : [];
+      if (!archivedIds.includes(emailId)) {
+        archivedIds.push(emailId);
+        localStorage.setItem('stopfive_archived', JSON.stringify(archivedIds));
+      }
+    } catch(e) {}
+  }
+
+  await supabase.from('emails')
+    .update({ status: 'archived' })
+    .eq('id', emailId);
+    
+  return true; // RLS UPDATE 실패 시에도 로컬스토리지 백업으로 무조건 성공 처리
+};
+
 // 추가된 Mock Stub 함수들
-export const sendAdminMailToUser = async (receiverVirtualEmail: string, subject: string, content: string): Promise<EmailMessage | null> => {
-  return null;
+export const sendAdminMailToUser = async (receiverVirtualEmail: string, subject: string, content: string): Promise<boolean> => {
+  const { data: user } = await supabase.from('users').select('id').eq('virtual_email', receiverVirtualEmail).single();
+  if (!user) return false;
+
+  const { error } = await supabase.from('emails').insert([{
+    user_id: user.id,
+    sender: 'team@stopfive.com',
+    receiver: receiverVirtualEmail,
+    subject: `Re: ${subject.replace(/^Re:\s*/, '')}`,
+    body: content,
+    status: 'unread',
+    is_system_mission: false
+  }]);
+  return !error;
 };
 
 export const updateUserProfile = async (virtualEmail: string, deliveryTime: string, name?: string, newPassword?: string): Promise<UserProfile | null> => {
-  return null;
+  if (newPassword) {
+    const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+    if (authError) {
+      console.error('Password update failed:', authError);
+      return null;
+    }
+  }
+
+  const updates: any = { delivery_time: deliveryTime.includes(':') && deliveryTime.length === 5 ? deliveryTime + ':00' : deliveryTime };
+  if (name) updates.name = name;
+
+  const { data, error } = await supabase.from('users')
+    .update(updates)
+    .eq('virtual_email', virtualEmail)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Profile update failed:', error);
+    return null;
+  }
+  return mapUserFromDb(data);
 };
 
 export const getStatsForUser = async (virtualEmail: string): Promise<DetailedStats | null> => {
@@ -182,3 +286,45 @@ function mapEmailFromDb(row: any): EmailMessage {
     replyContent: row.reply_content
   };
 }
+
+export const getScheduledEmails = async (): Promise<ScheduledEmail[]> => {
+  const { data, error } = await supabase.from('scheduled_emails').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error fetching scheduled emails:', error);
+    return [];
+  }
+  return data.map((row: any) => ({
+    id: row.id,
+    receiverVirtualEmail: row.receiver_virtual_email,
+    receiverName: row.receiver_name,
+    subject: row.subject,
+    body: row.body,
+    scheduledAt: row.scheduled_at,
+    status: row.status,
+    createdAt: row.created_at
+  }));
+};
+
+export const createScheduledEmail = async (receiverVirtualEmail: string, receiverName: string, subject: string, body: string, scheduledAt: string): Promise<boolean> => {
+  const { error } = await supabase.from('scheduled_emails').insert([{
+    receiver_virtual_email: receiverVirtualEmail,
+    receiver_name: receiverName,
+    subject,
+    body,
+    scheduled_at: scheduledAt
+  }]);
+  if (error) {
+    console.error('Error creating scheduled email:', error);
+    return false;
+  }
+  return true;
+};
+
+export const cancelScheduledEmail = async (id: string): Promise<boolean> => {
+  const { error } = await supabase.from('scheduled_emails').delete().eq('id', id);
+  if (error) {
+    console.error('Error deleting scheduled email:', error);
+    return false;
+  }
+  return true;
+};

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.1",
+    "iconv-lite": "^0.7.3",
     "next": "16.2.10",
     "playwright": "^1.61.1",
     "react": "19.2.4",
