@@ -91,7 +91,7 @@ export default function Home() {
   }, [adminTab, userTab]);
 
   // 로그인/회원가입 폼 상태
-  const [authMode, setAuthMode] = useState<'home' | 'login' | 'register'>('home');
+  const [authMode, setAuthMode] = useState<'home' | 'login' | 'register' | 'dashboard'>('home');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
