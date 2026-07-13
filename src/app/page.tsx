@@ -113,11 +113,15 @@ export default function Home() {
   useEffect(() => {
     // 1. await 전에 동기적으로 읽어둡니다.
     const savedMode = sessionStorage.getItem('authMode');
+    const savedUserTab = sessionStorage.getItem('userTab');
+    const savedAdminTab = sessionStorage.getItem('adminTab');
     
-    // 깜빡임 방지를 위해 즉시 모드 복구 시도 (currentUser 로드 전이므로 임시)
+    // 깜빡임 방지를 위해 즉시 모드/탭 복구 시도 (currentUser 로드 전이므로 임시)
     if (savedMode && savedMode !== 'home') {
       setAuthMode(savedMode as any);
     }
+    if (savedUserTab) setUserTab(savedUserTab as any);
+    if (savedAdminTab) setAdminTab(savedAdminTab as any);
 
     const fetchData = async () => {
       const user = await getCurrentUser();
@@ -163,8 +167,10 @@ export default function Home() {
   useEffect(() => {
     if (isAuthModeLoaded) {
       sessionStorage.setItem('authMode', authMode);
+      sessionStorage.setItem('userTab', userTab);
+      sessionStorage.setItem('adminTab', adminTab);
     }
-  }, [authMode, isAuthModeLoaded]);
+  }, [authMode, userTab, adminTab, isAuthModeLoaded]);
 
   useEffect(() => {
     if (currentUser) {
@@ -223,6 +229,8 @@ export default function Home() {
     setCurrentUser(null);
     setSelectedEmail(null);
     setUserTab('inbox');
+    setAdminTab('inbox');
+    setAuthMode('home');
   };
 
   // 답장 보내기 핸들러
