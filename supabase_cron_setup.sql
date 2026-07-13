@@ -6,7 +6,12 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- 2. 기존 동일한 이름의 크론 작업이 존재할 경우 안전하게 제거
-SELECT cron.unschedule('stopfive-email-cron');
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'stopfive-email-cron') THEN
+        PERFORM cron.unschedule('stopfive-email-cron');
+    END IF;
+END $$;
 
 -- 3. 5분 주기로 백엔드 크론 API(/api/cron) 호출 예약 등록
 -- 배포 주소(https://stopfive.com)와 사전에 설정한 CRON_SECRET 보안 키가 쿼리 스트링으로 포함됩니다.
