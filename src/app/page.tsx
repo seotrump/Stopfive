@@ -56,7 +56,7 @@ export default function Home() {
   // 사용자 및 내비게이션 상태
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userTab, setUserTab] = useState<'inbox' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose'>('inbox');
-  const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose' | 'scheduled' | 'scheduled-manage' | 'inbox' | 'sent' | 'archive' | 'settings'>('users');
+  const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose' | 'scheduled' | 'scheduled-manage' | 'inbox' | 'sent' | 'archive' | 'settings'>('inbox');
   const [emails, setEmails] = useState<any[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
   const [replyText, setReplyText] = useState('');
@@ -599,7 +599,7 @@ export default function Home() {
           {/* 모바일 햄버거 헤더 */}
           <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#F6F8FC] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30">
             <button
-              onClick={() => { handleLogout(); setAuthMode('home'); }}
+              onClick={() => { setIsMobileMenuOpen(false); setAdminTab('inbox'); setSelectedEmail(null); }}
               className="flex items-center space-x-2.5 hover:opacity-75 transition-opacity"
             >
               <span className="w-6 h-6 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-xs font-black shadow-sm">5</span>
@@ -621,7 +621,7 @@ export default function Home() {
             <div className="flex flex-col space-y-4 w-full">
               {/* 로고 영역 - 데스크탑 전용 */}
               <button
-                onClick={() => { handleLogout(); setAuthMode('home'); }}
+                onClick={() => { setAdminTab('inbox'); setSelectedEmail(null); }}
                 className="hidden md:flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left shrink-0"
               >
                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
@@ -839,6 +839,51 @@ export default function Home() {
                     <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-[#202124] dark:text-slate-100 font-normal">
                       {selectedEmail.body}
                     </div>
+
+                    {/* 어드민 답장 UI */}
+                    {selectedEmail.receiver === 'team@stopfive.com' && !selectedEmail.replyContent && (
+                      <div className="mt-8 border-t border-slate-100 dark:border-slate-800 pt-8">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+                          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">
+                            답장 보내기
+                          </div>
+                          <textarea
+                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all min-h-[120px] resize-none"
+                            placeholder="이용자에게 보낼 답장을 입력하세요."
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                          />
+                          <div className="flex justify-end mt-4">
+                            <button
+                              onClick={handleSendReply}
+                              disabled={!replyText.trim()}
+                              className="px-6 py-2.5 bg-[#1A73E8] hover:bg-[#1557B0] text-white font-bold rounded-full text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-sm"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                              </svg>
+                              <span>답장 전송</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 이미 답장 완료된 메일인 경우 */}
+                    {selectedEmail.status === 'archived' && selectedEmail.replyContent && (
+                      <div className="mt-8 border-t border-slate-100 dark:border-slate-800 pt-8">
+                        <div className="bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+                          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보낸 답장</div>
+                          <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                            {selectedEmail.replyContent}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-4 font-mono">
+                            Answered at: {new Date(selectedEmail.answeredAt).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               ) : adminTab === 'inbox' || adminTab === 'sent' || adminTab === 'archive' ? (
@@ -1318,7 +1363,7 @@ export default function Home() {
           {/* 모바일 햄버거 헤더 */}
           <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#F6F8FC] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30">
             <button
-              onClick={() => { handleLogout(); setAuthMode('home'); }}
+              onClick={() => { setIsMobileMenuOpen(false); setUserTab('inbox'); setSelectedEmail(null); }}
               className="flex items-center space-x-2.5 hover:opacity-75 transition-opacity"
             >
               <span className="w-6 h-6 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-xs font-black shadow-sm">5</span>
@@ -1340,7 +1385,7 @@ export default function Home() {
             <div className="flex flex-col space-y-4 w-full">
               {/* 로고 영역 - 데스크탑 전용 */}
               <button
-                onClick={() => { handleLogout(); setAuthMode('home'); }}
+                onClick={() => { setUserTab('inbox'); setSelectedEmail(null); }}
                 className="hidden md:flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left shrink-0"
               >
                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
