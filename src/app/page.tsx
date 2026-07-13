@@ -276,18 +276,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       
-      {/* 토스트 알림 컴포넌트 */}
-      {toast.show && (
-        <div className="fixed top-6 right-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 max-w-sm z-50 flex items-start space-x-3 animate-fade-in-down">
-          <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-primary shrink-0">
-            ✉️
-          </div>
-          <div>
-            {toast.title && <h4 className="text-xs font-bold text-slate-900 dark:text-white">{toast.title}</h4>}
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{toast.message}</p>
-          </div>
-        </div>
-      )}
+
 
       {/* 1. 비로그인 유저용 초프리미엄 웰컴 랜딩 페이지 */}
       {!currentUser ? (
@@ -585,14 +574,14 @@ export default function Home() {
         </div>
       ) : currentUser.role === 'admin' ? (
         /* 2-A. 관리자 대시보드 (Gmail 어드민 콘솔) */
-        <div className="flex-1 flex overflow-hidden h-screen pt-0 bg-[#F6F8FC] dark:bg-slate-950 text-slate-900 dark:text-white">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-screen pt-0 bg-[#F6F8FC] dark:bg-slate-950 text-slate-900 dark:text-white">
           {/* A-1. 관리자 좌측 사이드바 */}
-          <aside className="w-64 bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex flex-col justify-between shrink-0 p-3">
-            <div className="space-y-4">
+          <aside className="w-full md:w-64 bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex flex-row md:flex-col justify-start md:justify-between shrink-0 p-3 overflow-x-auto md:overflow-visible z-20 hide-scrollbar border-b md:border-b-0 border-slate-200 dark:border-slate-800">
+            <div className="flex flex-row md:flex-col items-center md:items-stretch space-x-4 md:space-x-0 md:space-y-4 w-max md:w-auto">
               {/* 로고 영역 - 클릭 시 홈으로 이동 */}
               <button
                 onClick={() => { handleLogout(); setAuthMode('home'); }}
-                className="flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left"
+                className="flex items-center space-x-2.5 px-3 py-2 md:py-4 hover:opacity-75 transition-opacity cursor-pointer w-auto md:w-full text-left shrink-0"
               >
                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
                 <span className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
@@ -600,10 +589,10 @@ export default function Home() {
               </button>
 
               {/* Compose 신규 메일 쓰기 버튼 (수동 시스템 발송용 모달) */}
-              <div className="mb-4">
+              <div className="mb-0 md:mb-4 shrink-0 flex items-center">
                 <button
                   onClick={() => { setAdminTab('compose'); setSelectedEmail(null); }}
-                  className="ml-2 pl-4 pr-6 py-4 bg-[#C2E7FF] hover:bg-[#A8D4F7] text-[#001D35] font-bold rounded-2xl text-[14px] transition-all flex items-center space-x-4 shadow-sm w-fit"
+                  className="ml-0 md:ml-2 pl-4 pr-6 py-2 md:py-4 bg-[#C2E7FF] hover:bg-[#A8D4F7] text-[#001D35] font-bold rounded-2xl text-[14px] transition-all flex items-center space-x-2 md:space-x-4 shadow-sm w-fit"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -613,10 +602,10 @@ export default function Home() {
               </div>
 
               {/* 네비게이션 메뉴 (9개 통합 항목) */}
-              <nav className="space-y-0.5">
+              <nav className="flex flex-row md:flex-col items-center md:items-stretch space-x-1 md:space-x-0 md:space-y-0.5 shrink-0 pr-4 md:pr-0">
                 <button
                   onClick={() => { setAdminTab('inbox'); setSelectedEmail(null); }}
-                  className={`w-[calc(100%-16px)] flex items-center justify-between pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center justify-between px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'inbox' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -637,13 +626,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setAdminTab('sent'); setSelectedEmail(null); }}
-                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'sent' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-2 md:mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                   <span>보낸편지함</span>
@@ -651,13 +640,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setAdminTab('archive'); setSelectedEmail(null); }}
-                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'archive' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-2 md:mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                   </svg>
                   <span>수신보관함</span>
@@ -665,13 +654,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setAdminTab('users'); setSelectedEmail(null); }}
-                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'users' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-2 md:mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   <span>유저 현황</span>
@@ -679,13 +668,13 @@ export default function Home() {
                 
                 <button
                   onClick={() => { setAdminTab('statistics'); setSelectedEmail(null); }}
-                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'statistics' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-2 md:mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
                   </svg>
                   <span>통계 관리</span>
@@ -693,13 +682,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setAdminTab('scheduled'); setSelectedEmail(null); }}
-                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'scheduled' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-2 md:mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <span>미션 예약</span>
@@ -707,13 +696,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setAdminTab('scheduled-manage'); setSelectedEmail(null); }}
-                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'scheduled-manage' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-2 md:mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
                   <span>예약 미션 관리</span>
@@ -721,13 +710,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setAdminTab('settings'); setSelectedEmail(null); }}
-                  className={`w-[calc(100%-16px)] flex items-center pl-6 pr-4 h-8 rounded-r-full text-[13px] transition-all ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'settings' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-2 md:mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -737,7 +726,7 @@ export default function Home() {
             </div>
 
             {/* 어드민 사이드바 하단 로그인 세션 요약 */}
-            <div className="space-y-2 p-1.5 pb-4">
+            <div className="hidden md:block space-y-2 p-1.5 pb-4">
               <div className="text-[9px] text-slate-400 px-3 py-1 space-y-0.5">
                 <div>관리자 계정:</div>
                 <div className="text-[#1f1f1f] dark:text-white truncate font-semibold">어드민 운영팀</div>
@@ -766,7 +755,7 @@ export default function Home() {
             {/* 탭 전환 뷰 */}
             <main className="flex-1 overflow-y-auto p-8 max-w-6xl w-full mx-auto space-y-8">
               {selectedEmail ? (
-                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8 min-h-[calc(100vh-56px)]">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8 min-h-[calc(100vh-56px)]">
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
                     <button 
                       onClick={() => setSelectedEmail(null)}
@@ -775,7 +764,7 @@ export default function Home() {
                       <span>← Back to {adminTab}</span>
                     </button>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                  <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
                       <div className="flex items-center space-x-3">
                         <h2 className="text-2xl font-bold tracking-tight text-[#202124] dark:text-white leading-tight">
@@ -812,18 +801,18 @@ export default function Home() {
                   </div>
                 </div>
               ) : adminTab === 'inbox' || adminTab === 'sent' || adminTab === 'archive' ? (
-                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8 h-[calc(100vh-56px)]">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8 h-[calc(100vh-56px)]">
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">
                       {adminTab === 'inbox' ? '받은편지함' : adminTab === 'sent' ? '보낸편지함' : '수신보관함'}
                     </span>
                   </div>
                   {/* 상단 고정 리스트 헤더 */}
-                  <div className="flex items-center px-4 h-8 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                  <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                     <div className="w-12 flex justify-center shrink-0"><input type="checkbox" className="w-3 h-3 rounded border-slate-300" /></div>
-                    <div className="w-40 shrink-0 pl-2">보낸사람 / 받는사람</div>
+                    <div className="w-40 shrink-0 pl-2 hidden sm:block">{adminTab === 'sent' ? '받는사람' : '보낸사람'}</div>
                     <div className="flex-1 min-w-0 pl-2">제목 및 내용</div>
-                    <div className="w-24 text-right shrink-0">날짜</div>
+                    <div className="w-24 text-right shrink-0 hidden md:block">날짜</div>
                   </div>
                   <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                     {adminFilteredEmails.length === 0 ? (
@@ -836,14 +825,14 @@ export default function Home() {
                           <div
                             key={email.id}
                             onClick={() => handleSelectEmail(email)}
-                            className={`h-8 flex items-center px-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-all ${
+                            className={`h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-all ${
                               isUnread ? 'bg-white dark:bg-slate-900' : 'bg-[#F2F5F9]/40 dark:bg-slate-850/10'
                             }`}
                           >
                             <div className="w-12 flex justify-center shrink-0">
                                <input type="checkbox" className="w-3 h-3 rounded border-slate-300" onClick={(e) => e.stopPropagation()} />
                             </div>
-                            <div className="w-40 shrink-0 pl-2 truncate text-xs">
+                            <div className="w-40 shrink-0 pl-2 truncate text-xs hidden sm:block">
                               <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
                                 {adminTab === 'sent' ? email.receiver.split('@')[0] : email.sender.split('@')[0]}
                               </span>
@@ -854,7 +843,7 @@ export default function Home() {
                               </span>
                               <span className="text-slate-400 truncate font-light">— {email.body}</span>
                             </div>
-                            <div className="w-24 text-right shrink-0 text-[11px]">
+                            <div className="w-24 text-right shrink-0 text-[11px] hidden md:block">
                               <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
                                 {new Date(email.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                               </span>
@@ -895,33 +884,43 @@ export default function Home() {
                   </div>
                 </div>
               ) : adminTab === 'users' ? (
-                /* 가입 유저 목록 테이블 */
-                <div className="bg-white dark:bg-slate-900 overflow-hidden shadow-none">
-                  <table className="w-full text-left border-collapse text-sm">
-                    <thead>
-                      <tr className="text-slate-500 border-b border-slate-200 dark:border-slate-850 text-xs">
-                        <th className="p-4 pl-6 w-12"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" /></th>
-                        <th className="p-4">사용자명</th>
-                        <th className="p-4">가입 이메일</th>
-                        <th className="p-4">가상 이메일</th>
-                        <th className="p-4">희망시간</th>
-                        <th className="p-4">진행률</th>
-                        <th className="p-4 text-right pr-6">시뮬레이션</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {adminUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((user) => {
+                /* 가입 유저 목록 테이블 -> 리스트형으로 변환 */
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8 h-[calc(100vh-56px)]">
+                  <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">
+                      유저 현황
+                    </span>
+                  </div>
+                  {/* 상단 고정 리스트 헤더 */}
+                  <div className="flex items-center px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                    <div className="w-12 flex justify-center shrink-0"><input type="checkbox" className="w-3 h-3 rounded border-slate-300" /></div>
+                    <div className="w-24 shrink-0 pl-2">사용자명</div>
+                    <div className="w-40 shrink-0 pl-2 hidden lg:block">가입 이메일</div>
+                    <div className="w-40 shrink-0 pl-2 hidden md:block">가상 이메일</div>
+                    <div className="w-20 shrink-0 pl-2 text-center hidden sm:block">희망시간</div>
+                    <div className="flex-1 min-w-0 pl-2">진행률</div>
+                    <div className="w-24 text-right shrink-0">시뮬레이션</div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {adminUsersList.length === 0 ? (
+                      <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                        <p className="text-sm font-medium">가입된 사용자가 없습니다</p>
+                      </div>
+                    ) : (
+                      adminUsersList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((user) => {
                         const isFinished = user.courseStatus === 'completed';
                         const stepPercent = Math.min(100, Math.round((user.courseStep / 5) * 100));
                         
                         return (
-                          <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 text-[#202124] dark:text-slate-200">
-                            <td className="p-4 pl-6"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" /></td>
-                            <td className="p-4 font-bold">{user.name}</td>
-                            <td className="p-4 text-xs font-light text-slate-500">{user.email}</td>
-                            <td className="p-4 text-xs font-semibold text-[#1A73E8] dark:text-blue-400">{user.virtualEmail}</td>
-                            <td className="p-4 font-mono text-xs text-slate-500">{user.deliveryTime}</td>
-                            <td className="p-4">
+                          <div key={user.id} className="h-10 flex items-center px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-xs text-[#202124] dark:text-slate-200 cursor-pointer">
+                            <div className="w-12 flex justify-center shrink-0">
+                              <input type="checkbox" className="w-3 h-3 rounded border-slate-300" />
+                            </div>
+                            <div className="w-24 shrink-0 pl-2 font-bold truncate">{user.name}</div>
+                            <div className="w-40 shrink-0 pl-2 text-slate-500 truncate hidden lg:block">{user.email}</div>
+                            <div className="w-40 shrink-0 pl-2 font-semibold text-[#1A73E8] dark:text-blue-400 truncate hidden md:block">{user.virtualEmail}</div>
+                            <div className="w-20 shrink-0 pl-2 text-center font-mono text-slate-500 truncate hidden sm:block">{user.deliveryTime}</div>
+                            <div className="flex-1 min-w-0 pl-2 pr-4">
                               <div className="flex items-center space-x-2">
                                 <div className="w-24 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                   <div 
@@ -929,33 +928,33 @@ export default function Home() {
                                     style={{ width: `${stepPercent}%` }}
                                   />
                                 </div>
-                                <span className="text-xs font-medium text-slate-500">
+                                <span className="text-[11px] font-medium text-slate-500">
                                   {user.courseStep}회차 ({stepPercent}%)
                                 </span>
                               </div>
-                            </td>
-                            <td className="p-4 text-right pr-6">
+                            </div>
+                            <div className="w-24 text-right shrink-0">
                               {isFinished ? (
-                                <span className="text-xs font-bold text-emerald-600">체험 완료</span>
+                                <span className="text-[11px] font-bold text-emerald-600">체험 완료</span>
                               ) : (
                                 <button
-                                  onClick={() => handleAdminTriggerNextDay(user.virtualEmail)}
-                                  className="text-[12px] font-medium text-blue-600 hover:text-blue-800 flex items-center justify-end gap-1 ml-auto"
+                                  onClick={(e) => { e.stopPropagation(); handleAdminTriggerNextDay(user.virtualEmail); }}
+                                  className="text-[11px] font-medium text-blue-600 hover:text-blue-800 flex items-center justify-end gap-1 ml-auto"
                                 >
                                   다음 발송 ⚡
                                 </button>
                               )}
-                            </td>
-                          </tr>
+                            </div>
+                          </div>
                         );
-                      })}
-                    </tbody>
-                  </table>
+                      })
+                    )}
+                  </div>
                   <Pagination total={adminUsersList.length} current={currentPage} onChange={setCurrentPage} />
                 </div>
               ) : adminTab === 'compose' ? (
                 /* 어드민 편지쓰기 - 이용자 편지쓰기 포맷과 완전히 통일 */
-                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8">
                   {/* 이메일 상세 보기와 동일한 상단 Back 바 */}
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
                     <button
@@ -966,7 +965,7 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                  <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
                     {/* 이메일 상세 보기와 동일한 제목 영역 */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
                       <div className="flex items-center space-x-3">
@@ -1071,7 +1070,7 @@ export default function Home() {
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">지정된 날짜와 시간에 특정 유저에게 메일을 예약 발송합니다.</p>
                   </div>
                   
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8">
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 md:p-8">
                     <form onSubmit={async (e) => {
                       e.preventDefault();
                       if (!scheduledTo || !scheduledSubject || !scheduledBody || !scheduledDate || !scheduledTime) {
@@ -1121,7 +1120,7 @@ export default function Home() {
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* 예약 날짜 */}
                         <div className="space-y-1.5">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 날짜</label>
@@ -1187,14 +1186,14 @@ export default function Home() {
                   </div>
                 </div>
               ) : adminTab === 'scheduled-manage' ? (
-                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8 h-[calc(100vh-56px)]">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8 h-[calc(100vh-56px)]">
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">예약 미션 관리</span>
                   </div>
                   {/* 상단 고정 리스트 헤더 */}
-                  <div className="flex items-center px-4 h-8 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                  <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                     <div className="w-20 shrink-0 pl-2">상태</div>
-                    <div className="w-28 shrink-0 pl-2">예약일시</div>
+                    <div className="w-28 shrink-0 pl-2 hidden md:block">예약일시</div>
                     <div className="w-40 shrink-0 pl-2">수신자</div>
                     <div className="flex-1 min-w-0 pl-2">제목</div>
                     <div className="w-16 text-right shrink-0">관리</div>
@@ -1206,13 +1205,13 @@ export default function Home() {
                       </div>
                     ) : (
                       scheduledEmails.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((se) => (
-                        <div key={se.id} className="h-8 flex items-center px-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-xs">
+                        <div key={se.id} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-xs">
                           <div className="w-20 shrink-0 pl-2 font-bold">
                             <span className={se.status === 'pending' ? 'text-amber-600' : se.status === 'sent' ? 'text-emerald-600' : 'text-slate-500'}>
                               {se.status === 'pending' ? '발송 대기' : se.status === 'sent' ? '발송 완료' : '취소됨'}
                             </span>
                           </div>
-                          <div className="w-28 shrink-0 pl-2 text-slate-500 truncate">
+                          <div className="w-28 shrink-0 pl-2 text-slate-500 truncate hidden md:block">
                             {new Date(se.scheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                           </div>
                           <div className="w-40 shrink-0 pl-2 font-medium text-slate-700 dark:text-slate-300 truncate">
@@ -1274,15 +1273,15 @@ export default function Home() {
         </div>
       ) : (
         /* 2. 로그인 유저용 메인 대시보드 (Gmail 감성 미니멀 Layout) */
-        <div className="flex-1 flex overflow-hidden h-screen pt-0 bg-[#F6F8FC] dark:bg-slate-950">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-screen pt-0 bg-[#F6F8FC] dark:bg-slate-950">
           
           {/* A. 좌측 사이드바 (사이드 네비게이션) */}
-          <aside className="w-64 bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex flex-col justify-between shrink-0 p-3">
-            <div className="space-y-4">
+          <aside className="w-full md:w-[260px] bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex flex-row md:flex-col justify-start md:justify-between shrink-0 p-3 overflow-x-auto md:overflow-visible z-20 hide-scrollbar border-b md:border-b-0 border-slate-200 dark:border-slate-800">
+            <div className="flex flex-row md:flex-col items-center md:items-stretch space-x-4 md:space-x-0 md:space-y-4 w-max md:w-auto">
               {/* 로고 영역 - 클릭 시 홈으로 이동 */}
               <button
                 onClick={() => { handleLogout(); setAuthMode('home'); }}
-                className="flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left"
+                className="flex items-center space-x-2.5 px-3 py-2 md:py-4 hover:opacity-75 transition-opacity cursor-pointer w-auto md:w-full text-left shrink-0"
               >
                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
                 <span className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
@@ -1290,10 +1289,10 @@ export default function Home() {
               </button>
 
               {/* Compose 신규 메일 쓰기 버튼 (지메일 스타일 - 색상 배제 및 은은한 보더형) */}
-              <div className="px-1.5 mt-2 mb-2">
+              <div className="px-1.5 mt-0 md:mt-2 mb-0 md:mb-2 shrink-0 flex items-center">
                 <button
                   onClick={() => { setSelectedEmail(null); setUserTab('compose'); }}
-                  className="ml-3 pl-3 pr-6 py-4 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-medium rounded-2xl text-[14px] transition-all flex items-center space-x-3 shadow-sm w-fit"
+                  className="ml-0 md:ml-3 pl-3 pr-6 py-2 md:py-4 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-medium rounded-2xl text-[14px] transition-all flex items-center space-x-2 md:space-x-3 shadow-sm w-fit"
                 >
                   <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1303,23 +1302,23 @@ export default function Home() {
               </div>
 
               {/* 네비게이션 메뉴 (흑백 아이콘 및 100% 한글 명칭 통일) */}
-              <nav className="space-y-0 px-1.5">
+              <nav className="flex flex-row md:flex-col items-center md:items-stretch space-x-1 md:space-x-0 md:space-y-0 px-1.5 shrink-0 pr-4 md:pr-0">
                 <button
                   onClick={() => { setUserTab('inbox'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center justify-between px-6 h-10 rounded-full text-[14px] transition-all ${
+                  className={`w-auto md:w-full flex items-center justify-between px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'inbox' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 md:space-x-3">
                     <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0V9a2 2 0 00-2-2H6a2 2 0 00-2 2v4m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2" />
                     </svg>
                     <span>받은편지함</span>
                   </div>
                   {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived').length > 0 && (
-                    <span className="text-[#202124] dark:text-white text-xs font-bold px-1">
+                    <span className="text-[#202124] dark:text-white text-xs font-bold pl-2 md:px-1">
                       {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived').length}
                     </span>
                   )}
@@ -1327,13 +1326,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setUserTab('archive'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center px-6 h-10 rounded-full text-[14px] transition-all ${
+                  className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'archive' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                   </svg>
                   <span>수신보관함</span>
@@ -1341,13 +1340,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setUserTab('sent'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center px-6 h-10 rounded-full text-[14px] transition-all ${
+                  className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'sent' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                   <span>보낸편지함</span>
@@ -1355,13 +1354,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setUserTab('statistics'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center px-6 h-10 rounded-full text-[14px] transition-all ${
+                  className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'statistics' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
                   </svg>
                   <span>통계 리포트</span>
@@ -1369,13 +1368,13 @@ export default function Home() {
 
                 <button
                   onClick={() => { setUserTab('settings'); setSelectedEmail(null); }}
-                  className={`w-full flex items-center px-6 h-10 rounded-full text-[14px] transition-all ${
+                  className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'settings' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
                   }`}
                 >
-                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -1385,7 +1384,7 @@ export default function Home() {
             </div>
 
             {/* 사이드바 최하단: 체험 가이드 모달 트리거 및 치트 제어 리셋 버튼 (모노크롬화 및 100% 한글화) */}
-            <div className="space-y-2 p-1.5 pb-4">
+            <div className="hidden md:block space-y-2 p-1.5 pb-4">
               <button 
                 onClick={() => setIsCourseGuideOpen(true)}
                 className="w-full py-2 bg-white dark:bg-slate-900 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-full text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-800 shadow-sm"
@@ -1462,7 +1461,7 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                  <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
                     {/* 메일 제목 영역 */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
                       <div className="flex items-center space-x-3">
@@ -1492,7 +1491,7 @@ export default function Home() {
                             </div>
                           </div>
                         </div>
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-slate-400 hidden sm:block">
                           {new Date(selectedEmail.createdAt).toLocaleString('ko-KR', { 
                             year: 'numeric', 
                             month: 'long', 
@@ -1743,7 +1742,7 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                  <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
                     {/* 이메일 상세 보기와 동일한 제목 영역 */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
                       <div className="flex items-center space-x-3">
@@ -1772,7 +1771,7 @@ export default function Home() {
                             </div>
                           </div>
                         </div>
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-slate-400 hidden sm:block">
                           {new Date().toLocaleString('ko-KR', {
                             year: 'numeric',
                             month: 'long',
@@ -1819,7 +1818,7 @@ export default function Home() {
                 </div>
               ) : userTab === 'settings' ? (
                 /* 설정 화면 */
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 max-w-lg mx-auto w-full">
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 max-w-lg mx-auto w-full">
                   <div>
                     <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
                     <p className="text-sm text-slate-400 mt-1">개인 편지함 수신 시간 및 프로필을 변경합니다.</p>
@@ -1936,27 +1935,35 @@ export default function Home() {
                         )}
                       </div>
                     ) : (
-                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                      <>
+                        {/* 상단 고정 리스트 헤더 추가 */}
+                        <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                          <div className="w-8 shrink-0 flex items-center justify-center"></div>
+                          <div className="w-40 shrink-0 pr-4 hidden sm:block">{userTab === 'sent' ? '받는사람' : '보낸사람'}</div>
+                          <div className="flex-1 min-w-0 pr-6">제목 및 내용</div>
+                          <div className="w-20 text-right shrink-0 hidden md:block">날짜</div>
+                        </div>
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
                         {userFiltered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((email) => {
                           const isUnread = email.status === 'unread' && email.receiver === currentUser.virtualEmail;
                           return (
                             <div
                               key={email.id}
                               onClick={() => handleSelectEmail(email)}
-                              className={`h-12 flex items-center px-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer border-b border-slate-100 dark:border-slate-800 transition-all ${
+                              className={`h-12 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer border-b border-slate-100 dark:border-slate-800 transition-all ${
                                 isUnread 
                                   ? 'bg-white dark:bg-slate-900 font-bold text-[#000000] dark:text-white' 
                                   : 'bg-[#F2F5F9]/40 dark:bg-slate-850/10 text-slate-500 dark:text-slate-400 font-normal'
                               }`}
                             >
                               {/* 지메일 시그니처 스타 아이콘 */}
-                              <div className="flex items-center px-2 shrink-0 text-slate-350 dark:text-slate-700">
+                              <div className="flex items-center justify-center w-8 shrink-0 text-slate-350 dark:text-slate-700">
                                 <svg className="w-4 h-4 hover:text-amber-400 transition-all cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.246.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.906a1 1 0 00.95-.69l1.519-4.674z" />
                                 </svg>
                               </div>
 
-                              <div className="w-40 shrink-0 pr-4 truncate text-sm">
+                              <div className="w-40 shrink-0 pr-4 truncate text-sm hidden sm:block">
                                 <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
                                   {userTab === 'sent' 
                                     ? (email.receiver === 'team@stopfive.com' ? 'StopFive Team' : email.receiver.split('@')[0])
@@ -1969,7 +1976,7 @@ export default function Home() {
                                 </span>
                                 <span className="text-slate-400 truncate font-light text-[13px]">— {email.body}</span>
                               </div>
-                              <div className="w-20 text-right shrink-0 text-xs">
+                              <div className="w-20 text-right shrink-0 text-xs hidden md:block">
                                 <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
                                   {new Date(email.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                 </span>
@@ -1978,6 +1985,7 @@ export default function Home() {
                           );
                         })}
                       </div>
+                    </>
                     )}
                   </div>
                   <Pagination total={userFiltered.length} current={currentPage} onChange={setCurrentPage} />
@@ -1990,7 +1998,7 @@ export default function Home() {
 
       {/* C. Compose 메일 쓰기 팝업 모달 */}
       {isComposeOpen && (
-        <div className="fixed bottom-0 right-12 w-[520px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-fade-in-up">
+        <div className="fixed bottom-0 right-0 md:right-12 w-full md:w-[520px] max-w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-fade-in-up">
           <div className="h-10 bg-slate-950 text-white px-4 flex items-center justify-between shrink-0">
             <span className="text-xs font-semibold">New Message</span>
             <button onClick={() => setIsComposeOpen(false)} className="hover:bg-white/20 p-1 rounded transition-all">

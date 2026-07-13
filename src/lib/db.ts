@@ -139,13 +139,17 @@ export const sendReply = async (emailId: string, replyText: string): Promise<boo
     })
     .eq('id', emailId);
 
-  const { data: originalEmail } = await supabase.from('emails').select('receiver, subject, user_id').eq('id', emailId).single();
+  const { data: originalEmail } = await supabase.from('emails').select('receiver, sender, subject, user_id').eq('id', emailId).single();
   
   if (originalEmail) {
+    const isReplyFromAdmin = originalEmail.receiver === 'team@stopfive.com';
+    const newSender = isReplyFromAdmin ? 'team@stopfive.com' : originalEmail.receiver;
+    const newReceiver = isReplyFromAdmin ? originalEmail.sender : 'team@stopfive.com';
+
     await supabase.from('emails').insert([{
       user_id: originalEmail.user_id,
-      sender: originalEmail.receiver,
-      receiver: 'team@stopfive.com',
+      sender: newSender,
+      receiver: newReceiver,
       subject: originalEmail.subject.startsWith('Re:') ? originalEmail.subject : `Re: ${originalEmail.subject}`,
       body: replyText,
       status: 'unread',
