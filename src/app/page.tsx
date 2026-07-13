@@ -20,8 +20,7 @@ import {
   getScheduledEmails,
   createScheduledEmail,
   cancelScheduledEmail,
-  markEmailAsArchived,
-  processScheduledEmails
+  markEmailAsArchived
 } from '../lib/db';
 const ITEMS_PER_PAGE = 20;
 
@@ -146,20 +145,13 @@ export default function Home() {
     };
     fetchData();
 
-    // 예약 메일 백그라운드 처리 (1분마다 체크)
+    // 화면 메일 목록 동기화 (1분마다 체크)
     const interval = setInterval(async () => {
-      const sentCount = await processScheduledEmails();
-      if (sentCount > 0) {
-        // 메일이 발송되었다면 현재 화면의 메일 목록도 새로고침
-        const user = await getCurrentUser();
-        if (user) {
-          setEmails(await getLocalEmails(user.virtualEmail));
-        }
+      const user = await getCurrentUser();
+      if (user) {
+        setEmails(await getLocalEmails(user.virtualEmail));
       }
     }, 60000);
-    
-    // 초기 1회 실행
-    processScheduledEmails();
 
     return () => clearInterval(interval);
   }, []);
