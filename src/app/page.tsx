@@ -999,7 +999,7 @@ export default function Home() {
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-900'
                             : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
                         }`}>
-                          {selectedScheduledEmail.status === 'pending' ? '발송 대기' : selectedScheduledEmail.status === 'sent' ? '발송 완료' : '취소됨'}
+                          {selectedScheduledEmail.status === 'pending' ? '대기' : selectedScheduledEmail.status === 'sent' ? '완료' : '취소됨'}
                         </span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
@@ -1416,7 +1416,7 @@ export default function Home() {
                     <div className="w-20 shrink-0 pl-2">상태</div>
                     <div className="w-40 shrink-0 pl-2">수신자</div>
                     <div className="flex-1 min-w-0 pl-2">제목</div>
-                    <div className="w-44 shrink-0 pl-2 text-right md:text-left">예약일시</div>
+                    <div className="w-44 shrink-0 pl-2 hidden md:block">예약일시</div>
                     <div className="w-16 text-right shrink-0">관리</div>
                   </div>
                   <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
@@ -1429,7 +1429,7 @@ export default function Home() {
                         <div key={se.id} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-xs">
                           <div className="w-20 shrink-0 pl-2 font-bold">
                             <span className={se.status === 'pending' ? 'text-amber-600' : se.status === 'sent' ? 'text-emerald-600' : 'text-slate-500'}>
-                              {se.status === 'pending' ? '발송 대기' : se.status === 'sent' ? '발송 완료' : '취소됨'}
+                              {se.status === 'pending' ? '대기' : se.status === 'sent' ? '완료' : '취소됨'}
                             </span>
                           </div>
                           <div className="w-40 shrink-0 pl-2 font-medium text-slate-700 dark:text-slate-300 truncate">
@@ -1441,7 +1441,7 @@ export default function Home() {
                           >
                             {se.subject}
                           </div>
-                          <div className="w-44 shrink-0 pl-2 text-slate-500 truncate text-right md:text-left font-medium">
+                          <div className="w-44 shrink-0 pl-2 text-slate-500 truncate hidden md:block font-medium">
                             {formatDateTime(se.scheduledAt)}
                           </div>
                           <div className="w-16 text-right shrink-0">
