@@ -78,6 +78,14 @@ export default function Home() {
   const [scheduledBody, setScheduledBody] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('09:00');
+  const [selectedScheduledEmail, setSelectedScheduledEmail] = useState<any>(null);
+
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   // 설정 폼 상태
   const [settingsNewPassword, setSettingsNewPassword] = useState('');
@@ -87,6 +95,8 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedEmail(null);
+    setSelectedScheduledEmail(null);
   }, [adminTab, userTab]);
 
   // 로그인/회원가입 폼 상태
@@ -966,6 +976,52 @@ export default function Home() {
 
                   </div>
                 </div>
+              ) : selectedScheduledEmail ? (
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8 min-h-[calc(100vh-56px)]">
+                  <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
+                    <button 
+                      onClick={() => setSelectedScheduledEmail(null)}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
+                    >
+                      <span>← 예약 목록으로 돌아가기</span>
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+                    <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <h2 className="text-2xl font-bold tracking-tight text-[#202124] dark:text-white leading-tight">
+                          {selectedScheduledEmail.subject}
+                        </h2>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
+                          selectedScheduledEmail.status === 'pending'
+                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 border-amber-200 dark:border-amber-900'
+                            : selectedScheduledEmail.status === 'sent'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-900'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                        }`}>
+                          {selectedScheduledEmail.status === 'pending' ? '발송 대기' : selectedScheduledEmail.status === 'sent' ? '발송 완료' : '취소됨'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <div>
+                          <span className="font-bold">수신자: </span>
+                          <span className="text-slate-800 dark:text-slate-200">{selectedScheduledEmail.receiverVirtualEmail} ({selectedScheduledEmail.receiverName || '이름 없음'})</span>
+                        </div>
+                        <div>
+                          <span className="font-bold">발송 예정일시: </span>
+                          <span className="text-amber-600 font-bold">{formatDateTime(selectedScheduledEmail.scheduledAt)}</span>
+                        </div>
+                        <div>
+                          <span className="font-bold">생성 일시: </span>
+                          <span>{new Date(selectedScheduledEmail.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-[#202124] dark:text-slate-100 font-normal">
+                      {selectedScheduledEmail.body}
+                    </div>
+                  </div>
+                </div>
               ) : adminTab === 'inbox' || adminTab === 'sent' || adminTab === 'archive' ? (
                 <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8 h-[calc(100vh-56px)]">
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
@@ -1358,9 +1414,9 @@ export default function Home() {
                   {/* 상단 고정 리스트 헤더 */}
                   <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                     <div className="w-20 shrink-0 pl-2">상태</div>
-                    <div className="w-28 shrink-0 pl-2 hidden md:block">예약일시</div>
                     <div className="w-40 shrink-0 pl-2">수신자</div>
                     <div className="flex-1 min-w-0 pl-2">제목</div>
+                    <div className="w-44 shrink-0 pl-2 text-right md:text-left">예약일시</div>
                     <div className="w-16 text-right shrink-0">관리</div>
                   </div>
                   <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
@@ -1376,14 +1432,17 @@ export default function Home() {
                               {se.status === 'pending' ? '발송 대기' : se.status === 'sent' ? '발송 완료' : '취소됨'}
                             </span>
                           </div>
-                          <div className="w-28 shrink-0 pl-2 text-slate-500 truncate hidden md:block">
-                            {new Date(se.scheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                          </div>
                           <div className="w-40 shrink-0 pl-2 font-medium text-slate-700 dark:text-slate-300 truncate">
                             {se.receiverVirtualEmail ? se.receiverVirtualEmail.split('@')[0] : '알수없음'}
                           </div>
-                          <div className="flex-1 min-w-0 pl-2 text-slate-800 dark:text-slate-200 truncate font-medium">
+                          <div 
+                            className="flex-1 min-w-0 pl-2 text-slate-800 dark:text-slate-200 truncate font-semibold cursor-pointer hover:text-[#1A73E8] hover:underline"
+                            onClick={() => setSelectedScheduledEmail(se)}
+                          >
                             {se.subject}
+                          </div>
+                          <div className="w-44 shrink-0 pl-2 text-slate-500 truncate text-right md:text-left font-medium">
+                            {formatDateTime(se.scheduledAt)}
                           </div>
                           <div className="w-16 text-right shrink-0">
                             {se.status === 'pending' && (
