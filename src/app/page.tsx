@@ -77,7 +77,8 @@ export default function Home() {
   const [scheduledSubject, setScheduledSubject] = useState('');
   const [scheduledBody, setScheduledBody] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
-  const [scheduledTime, setScheduledTime] = useState('09:00');
+  const [scheduledHour, setScheduledHour] = useState('09');
+  const [scheduledMinute, setScheduledMinute] = useState('00');
   const [selectedScheduledEmail, setSelectedScheduledEmail] = useState<any>(null);
 
   const formatDateTime = (dateStr: string) => {
@@ -1294,12 +1295,12 @@ export default function Home() {
                   <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 md:p-8">
                     <form onSubmit={async (e) => {
                       e.preventDefault();
-                      if (!scheduledTo || !scheduledSubject || !scheduledBody || !scheduledDate || !scheduledTime) {
+                      if (!scheduledTo || !scheduledSubject || !scheduledBody || !scheduledDate || !scheduledHour || !scheduledMinute) {
                         triggerToast("모든 항목을 입력해주세요.", "입력 오류");
                         return;
                       }
                       
-                      const scheduleDateStr = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+                      const scheduleDateStr = new Date(`${scheduledDate}T${scheduledHour}:${scheduledMinute}:00`).toISOString();
                       const targetUser = allUsers.find(u => u.virtualEmail === scheduledTo);
                       const receiverName = targetUser ? targetUser.name : 'Unknown';
 
@@ -1317,7 +1318,8 @@ export default function Home() {
                         setScheduledSubject('');
                         setScheduledBody('');
                         setScheduledDate('');
-                        setScheduledTime('09:00');
+                        setScheduledHour('09');
+                        setScheduledMinute('00');
                         setAdminTab('scheduled-manage');
                         setSelectedEmail(null);
                       } else {
@@ -1356,14 +1358,31 @@ export default function Home() {
 
                         {/* 예약 시간 */}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 시간</label>
-                          <input
-                            type="time"
-                            value={scheduledTime}
-                            onChange={(e) => setScheduledTime(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
-                            required
-                          />
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 시간 (24시간 형식)</label>
+                          <div className="flex space-x-2">
+                            <select
+                              value={scheduledHour}
+                              onChange={(e) => setScheduledHour(e.target.value)}
+                              className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                              required
+                            >
+                              {Array.from({ length: 24 }, (_, i) => {
+                                const h = i.toString().padStart(2, '0');
+                                return <option key={h} value={h}>{h}시</option>;
+                              })}
+                            </select>
+                            <select
+                              value={scheduledMinute}
+                              onChange={(e) => setScheduledMinute(e.target.value)}
+                              className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                              required
+                            >
+                              {Array.from({ length: 60 }, (_, i) => {
+                                const m = i.toString().padStart(2, '0');
+                                return <option key={m} value={m}>{m}분</option>;
+                              })}
+                            </select>
+                          </div>
                         </div>
                       </div>
 
