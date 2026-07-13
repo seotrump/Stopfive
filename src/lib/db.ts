@@ -121,7 +121,7 @@ export const getLocalEmails = async (virtualEmail: string): Promise<EmailMessage
   return emails;
 };
 
-export const sendReply = async (emailId: string, replyText: string): Promise<boolean> => {
+export const sendReply = async (emailId: string, replyText: string, replySubject?: string): Promise<boolean> => {
   if (typeof window !== 'undefined') {
     try {
       const repliesStr = localStorage.getItem('stopfive_replies');
@@ -150,7 +150,7 @@ export const sendReply = async (emailId: string, replyText: string): Promise<boo
       user_id: originalEmail.user_id,
       sender: newSender,
       receiver: newReceiver,
-      subject: originalEmail.subject.startsWith('Re:') ? originalEmail.subject : `Re: ${originalEmail.subject}`,
+      subject: replySubject ? replySubject : (originalEmail.subject.startsWith('Re:') ? originalEmail.subject : `Re: ${originalEmail.subject}`),
       body: replyText,
       status: 'unread',
       is_system_mission: false

@@ -60,6 +60,8 @@ export default function Home() {
   const [emails, setEmails] = useState<any[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
   const [replyText, setReplyText] = useState('');
+  const [replySubject, setReplySubject] = useState('');
+  const [authError, setAuthError] = useState('');
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isCourseGuideOpen, setIsCourseGuideOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -157,17 +159,21 @@ export default function Home() {
   // 로그인 핸들러
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError('');
     const user = await loginUser(authEmail, authPassword);
     if (user) {
       setCurrentUser(user);
       setEmails(await getLocalEmails(user.virtualEmail));
       setAuthPassword('');
+    } else {
+      setAuthError('아이디가 존재하지 않거나 비밀번호가 틀렸습니다.');
     }
   };
 
   // 회원가입 핸들러
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError('');
     const username = authEmail.split('@')[0] || 'user';
     const user = await registerUser(authName, username, authEmail, authDeliveryTime, authPassword);
     if (user) {
@@ -175,6 +181,8 @@ export default function Home() {
       setEmails(await getLocalEmails(user.virtualEmail));
       setAllUsers(await getAllUsers());
       setAuthPassword('');
+    } else {
+      setAuthError('회원가입에 실패했습니다. (이미 존재하는 이메일일 수 있습니다)');
     }
   };
 
@@ -191,7 +199,7 @@ export default function Home() {
     e.preventDefault();
     if (!replyText.trim() || !selectedEmail || !currentUser) return;
 
-    const success = await sendReply(selectedEmail.id, replyText);
+    const success = await sendReply(selectedEmail.id, replyText, replySubject);
     if (success) {
       // 리스트 갱신 및 상태 동기화
       setEmails(await getLocalEmails(currentUser.virtualEmail));
@@ -200,6 +208,7 @@ export default function Home() {
       
       triggerToast("답장이 성공적으로 전송되어 약속이 보관함으로 옮겨졌습니다.", "답장 전송 완료");
       setReplyText('');
+      setReplySubject('');
       setSelectedEmail(null);
     }
   };
@@ -258,6 +267,7 @@ export default function Home() {
       setEmails(local);
     }
     setSelectedEmail({ ...email, status: found ? found.status : email.status });
+    setReplySubject(email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`);
   };
 
   // 메일 탭 필터링
@@ -319,6 +329,11 @@ export default function Home() {
                   <p className="text-xs text-slate-500">계정에 로그인하여 메일함으로 이동합니다</p>
                 </div>
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm space-y-5">
+                  {authError && (
+                    <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800" role="alert">
+                      {authError}
+                    </div>
+                  )}
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">이메일</label>
@@ -351,7 +366,7 @@ export default function Home() {
                   </form>
                   <div className="text-center text-xs text-slate-400">
                     계정이 없으신가요?{' '}
-                    <button onClick={() => setAuthMode('register')} className="font-bold text-[#202124] dark:text-white hover:underline">
+                    <button onClick={() => { setAuthMode('register'); setAuthError(''); }} className="font-bold text-[#202124] dark:text-white hover:underline">
                       회원가입
                     </button>
                   </div>
@@ -381,6 +396,11 @@ export default function Home() {
                   <p className="text-xs text-slate-500">3일 5회 체험 코스에 가입합니다</p>
                 </div>
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm space-y-5">
+                  {authError && (
+                    <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800" role="alert">
+                      {authError}
+                    </div>
+                  )}
                   <form onSubmit={handleRegister} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">이름</label>
@@ -437,7 +457,7 @@ export default function Home() {
                   </p>
                   <div className="text-center text-xs text-slate-400">
                     이미 계정이 있으신가요?{' '}
-                    <button onClick={() => setAuthMode('login')} className="font-bold text-[#202124] dark:text-white hover:underline">
+                    <button onClick={() => { setAuthMode('login'); setAuthError(''); }} className="font-bold text-[#202124] dark:text-white hover:underline">
                       로그인
                     </button>
                   </div>
@@ -847,8 +867,15 @@ export default function Home() {
                           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">
                             답장 보내기
                           </div>
+                          <input
+                            type="text"
+                            className="w-full mb-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all"
+                            placeholder="제목"
+                            value={replySubject}
+                            onChange={(e) => setReplySubject(e.target.value)}
+                          />
                           <textarea
-                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all min-h-[120px] resize-none"
+                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all min-h-[120px] resize-none"
                             placeholder="이용자에게 보낼 답장을 입력하세요."
                             value={replyText}
                             onChange={(e) => setReplyText(e.target.value)}
@@ -1621,11 +1648,19 @@ export default function Home() {
                           <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
                             REPLY BOX (여기에 오늘의 미션 수행 답장을 입력하세요)
                           </label>
+                          <input
+                            type="text"
+                            value={replySubject}
+                            onChange={(e) => setReplySubject(e.target.value)}
+                            placeholder="제목"
+                            className="w-full mb-2 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400 transition-all shadow-sm"
+                            required
+                          />
                           <textarea
                             value={replyText}
                             onChange={(e) => setReplyText(e.target.value)}
                             placeholder="미션을 완료했다면 짧은 답장을 입력하고 Send를 눌러주세요. (예: 완료했습니다! / 기지개 켜니 아주 개운합니다.)"
-                            className="w-full h-32 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-450 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
+                            className="w-full h-32 p-4 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-450 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400 transition-all resize-none shadow-sm"
                             required
                           />
                         </div>
