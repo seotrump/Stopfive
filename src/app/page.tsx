@@ -111,9 +111,22 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       const user = await getCurrentUser();
+      const savedMode = sessionStorage.getItem('authMode');
+      
       if (user) {
         setCurrentUser(user);
         setEmails(await getLocalEmails(user.virtualEmail));
+        if (savedMode === 'home') {
+          setAuthMode('home');
+        } else {
+          setAuthMode('dashboard');
+        }
+      } else {
+        if (savedMode === 'login' || savedMode === 'register') {
+          setAuthMode(savedMode as any);
+        } else {
+          setAuthMode('home');
+        }
       }
       setAllUsers(await getAllUsers());
     };
@@ -136,6 +149,10 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem('authMode', authMode);
+  }, [authMode]);
 
   useEffect(() => {
     if (currentUser) {
@@ -165,6 +182,7 @@ export default function Home() {
       setCurrentUser(user);
       setEmails(await getLocalEmails(user.virtualEmail));
       setAuthPassword('');
+      setAuthMode('dashboard');
     } else {
       setAuthError('아이디가 존재하지 않거나 비밀번호가 틀렸습니다.');
     }
@@ -181,6 +199,7 @@ export default function Home() {
       setEmails(await getLocalEmails(user.virtualEmail));
       setAllUsers(await getAllUsers());
       setAuthPassword('');
+      setAuthMode('dashboard');
     } else {
       setAuthError('회원가입에 실패했습니다. (이미 존재하는 이메일일 수 있습니다)');
     }
