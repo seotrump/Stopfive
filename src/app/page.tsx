@@ -1413,8 +1413,8 @@ export default function Home() {
                   </div>
                   {/* 상단 고정 리스트 헤더 */}
                   <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
-                    <div className="w-20 shrink-0 pl-2">상태</div>
-                    <div className="w-40 shrink-0 pl-2">수신자</div>
+                    <div className="w-14 sm:w-20 shrink-0 pl-2">상태</div>
+                    <div className="w-40 shrink-0 pl-2 hidden sm:block">수신자</div>
                     <div className="flex-1 min-w-0 pl-2">제목</div>
                     <div className="w-44 shrink-0 pl-2 hidden md:block">예약일시</div>
                     <div className="w-16 text-right shrink-0">관리</div>
@@ -1427,12 +1427,12 @@ export default function Home() {
                     ) : (
                       scheduledEmails.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((se) => (
                         <div key={se.id} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-xs">
-                          <div className="w-20 shrink-0 pl-2 font-bold">
+                          <div className="w-14 sm:w-20 shrink-0 pl-2 font-bold">
                             <span className={se.status === 'pending' ? 'text-amber-600' : se.status === 'sent' ? 'text-emerald-600' : 'text-slate-500'}>
                               {se.status === 'pending' ? '대기' : se.status === 'sent' ? '완료' : '취소됨'}
                             </span>
                           </div>
-                          <div className="w-40 shrink-0 pl-2 font-medium text-slate-700 dark:text-slate-300 truncate">
+                          <div className="w-40 shrink-0 pl-2 font-medium text-slate-700 dark:text-slate-300 truncate hidden sm:block">
                             {se.receiverVirtualEmail ? se.receiverVirtualEmail.split('@')[0] : '알수없음'}
                           </div>
                           <div 
@@ -1458,7 +1458,7 @@ export default function Home() {
                                 }}
                                 className="text-[11px] font-bold text-red-500 hover:text-red-700"
                               >
-                                발송 취소
+                                취소
                               </button>
                             )}
                           </div>
