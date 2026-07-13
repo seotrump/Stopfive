@@ -730,7 +730,7 @@ export default function Home() {
               <nav className="flex flex-col space-y-0.5 shrink-0 pr-0">
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('inbox'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center justify-between px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center justify-between px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
                     adminTab === 'inbox' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -751,7 +751,7 @@ export default function Home() {
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('sent'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
                     adminTab === 'sent' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -765,7 +765,7 @@ export default function Home() {
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('archive'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
                     adminTab === 'archive' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -779,7 +779,7 @@ export default function Home() {
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('users'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
                     adminTab === 'users' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -793,7 +793,7 @@ export default function Home() {
                 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('statistics'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
                     adminTab === 'statistics' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -807,7 +807,7 @@ export default function Home() {
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('scheduled'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
                     adminTab === 'scheduled' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -821,7 +821,7 @@ export default function Home() {
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('scheduled-manage'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
                     adminTab === 'scheduled-manage' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -835,7 +835,7 @@ export default function Home() {
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('settings'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
+                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
                     adminTab === 'settings' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
                       : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
@@ -1031,7 +1031,7 @@ export default function Home() {
                     </span>
                   </div>
                   {/* 상단 고정 리스트 헤더 */}
-                  <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                  <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-[14px] font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                     <div className="w-12 flex justify-center shrink-0"><input type="checkbox" className="w-3 h-3 rounded border-slate-300" /></div>
                     <div className="w-40 shrink-0 pl-2 hidden sm:block">{adminTab === 'sent' ? '받는사람' : '보낸사람'}</div>
                     <div className="flex-1 min-w-0 pl-2">제목 및 내용</div>
@@ -1055,17 +1055,17 @@ export default function Home() {
                             <div className="w-12 flex justify-center shrink-0">
                                <input type="checkbox" className="w-3 h-3 rounded border-slate-300" onClick={(e) => e.stopPropagation()} />
                             </div>
-                            <div className="w-40 shrink-0 pl-2 truncate text-xs hidden sm:block">
+                            <div className="w-40 shrink-0 pl-2 truncate text-[14px] hidden sm:block">
                               <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
                                 {adminTab === 'sent' ? email.receiver.split('@')[0] : email.sender.split('@')[0]}
                               </span>
                             </div>
-                            <div className="flex-1 min-w-0 pl-2 text-xs">
+                            <div className="flex-1 min-w-0 pl-2 text-[14px]">
                               <div className={`truncate ${isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}`}>
                                 {email.subject}
                               </div>
                             </div>
-                            <div className="w-24 text-right shrink-0 text-[11px] hidden md:block">
+                            <div className="w-24 text-right shrink-0 text-[14px] hidden md:block">
                               <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
                                 {new Date(email.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                               </span>
@@ -1431,7 +1431,7 @@ export default function Home() {
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">예약 미션 관리</span>
                   </div>
                   {/* 상단 고정 리스트 헤더 */}
-                  <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                  <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-[14px] font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                     <div className="w-14 sm:w-20 shrink-0 pl-2">상태</div>
                     <div className="w-16 shrink-0 pl-2">관리</div>
                     <div className="w-40 shrink-0 pl-2 hidden sm:block">수신자</div>
@@ -1445,7 +1445,7 @@ export default function Home() {
                       </div>
                     ) : (
                       scheduledEmails.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((se) => (
-                        <div key={se.id} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-xs">
+                        <div key={se.id} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-[14px]">
                           {/* 1. 상태 */}
                           <div className={`w-14 sm:w-20 shrink-0 pl-2 ${se.status === 'pending' ? 'font-bold' : 'font-normal'}`}>
                             <span className={se.status === 'pending' ? 'text-amber-600' : se.status === 'sent' ? 'text-emerald-600' : 'text-slate-500'}>
@@ -2215,7 +2215,7 @@ export default function Home() {
                     ) : (
                       <>
                         {/* 상단 고정 리스트 헤더 추가 */}
-                        <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                        <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-[14px] font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                           <div className="w-8 shrink-0 flex items-center justify-center"></div>
                           <div className="w-40 shrink-0 pr-4 hidden sm:block">{userTab === 'sent' ? '받는사람' : '보낸사람'}</div>
                           <div className="flex-1 min-w-0 pr-6">제목 및 내용</div>
@@ -2241,19 +2241,19 @@ export default function Home() {
                                 </svg>
                               </div>
 
-                              <div className="w-40 shrink-0 pr-4 truncate text-sm hidden sm:block">
+                              <div className="w-40 shrink-0 pr-4 truncate text-[14px] hidden sm:block">
                                 <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
                                   {userTab === 'sent' 
                                     ? (email.receiver === 'team@stopfive.com' ? 'StopFive Team' : email.receiver.split('@')[0])
                                     : (email.sender === 'team@stopfive.com' ? 'StopFive Team' : email.sender.split('@')[0])}
                                 </span>
                               </div>
-                              <div className="flex-1 min-w-0 pr-6 text-sm">
+                              <div className="flex-1 min-w-0 pr-6 text-[14px]">
                                 <div className={`truncate ${isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}`}>
                                   {email.subject}
                                 </div>
                               </div>
-                              <div className="w-20 text-right shrink-0 text-xs hidden md:block">
+                              <div className="w-20 text-right shrink-0 text-[14px] hidden md:block">
                                 <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
                                   {new Date(email.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                 </span>
