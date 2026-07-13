@@ -94,6 +94,9 @@ export default function Home() {
   const [authName, setAuthName] = useState('');
   const [authDeliveryTime, setAuthDeliveryTime] = useState('09:00');
 
+  // 모바일 메뉴 사이드바 토글 상태
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   // 토스트 메시지 상태
   const [toast, setToast] = useState<{ show: boolean; message: string; title?: string }>({
     show: false,
@@ -575,13 +578,33 @@ export default function Home() {
       ) : currentUser.role === 'admin' ? (
         /* 2-A. 관리자 대시보드 (Gmail 어드민 콘솔) */
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-screen pt-0 bg-[#F6F8FC] dark:bg-slate-950 text-slate-900 dark:text-white">
+          {/* 모바일 햄버거 헤더 */}
+          <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#F6F8FC] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30">
+            <button
+              onClick={() => { handleLogout(); setAuthMode('home'); }}
+              className="flex items-center space-x-2.5 hover:opacity-75 transition-opacity"
+            >
+              <span className="w-6 h-6 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-xs font-black shadow-sm">5</span>
+              <span className="text-xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
+            </button>
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 -mr-2 text-slate-600 dark:text-slate-300">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isMobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
+
           {/* A-1. 관리자 좌측 사이드바 */}
-          <aside className="w-full md:w-64 bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex flex-row md:flex-col justify-start md:justify-between shrink-0 p-3 overflow-x-auto md:overflow-visible z-20 hide-scrollbar border-b md:border-b-0 border-slate-200 dark:border-slate-800">
-            <div className="flex flex-row md:flex-col items-center md:items-stretch space-x-4 md:space-x-0 md:space-y-4 w-max md:w-auto">
-              {/* 로고 영역 - 클릭 시 홈으로 이동 */}
+          <aside className={`${isMobileMenuOpen ? 'flex absolute inset-0 top-[57px] bg-[#F6F8FC] dark:bg-slate-950 z-40' : 'hidden'} md:flex md:static w-full md:w-64 bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex-col justify-start md:justify-between shrink-0 p-4 md:p-3 overflow-y-auto z-20 hide-scrollbar border-b md:border-b-0 border-slate-200 dark:border-slate-800`}>
+            <div className="flex flex-col space-y-4 w-full">
+              {/* 로고 영역 - 데스크탑 전용 */}
               <button
                 onClick={() => { handleLogout(); setAuthMode('home'); }}
-                className="flex items-center space-x-2.5 px-3 py-2 md:py-4 hover:opacity-75 transition-opacity cursor-pointer w-auto md:w-full text-left shrink-0"
+                className="hidden md:flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left shrink-0"
               >
                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
                 <span className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
@@ -591,7 +614,7 @@ export default function Home() {
               {/* Compose 신규 메일 쓰기 버튼 (수동 시스템 발송용 모달) */}
               <div className="mb-0 md:mb-4 shrink-0 flex items-center">
                 <button
-                  onClick={() => { setAdminTab('compose'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('compose'); setSelectedEmail(null); setIsMobileMenuOpen(false); }}
                   className="ml-0 md:ml-2 pl-4 pr-6 py-2 md:py-4 bg-[#C2E7FF] hover:bg-[#A8D4F7] text-[#001D35] font-bold rounded-2xl text-[14px] transition-all flex items-center space-x-2 md:space-x-4 shadow-sm w-fit"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -602,9 +625,9 @@ export default function Home() {
               </div>
 
               {/* 네비게이션 메뉴 (9개 통합 항목) */}
-              <nav className="flex flex-row md:flex-col items-center md:items-stretch space-x-1 md:space-x-0 md:space-y-0.5 shrink-0 pr-4 md:pr-0">
+              <nav className="flex flex-col space-y-0.5 shrink-0 pr-0">
                 <button
-                  onClick={() => { setAdminTab('inbox'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('inbox'); setSelectedEmail(null); }}
                   className={`w-auto md:w-[calc(100%-16px)] flex items-center justify-between px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'inbox' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
@@ -625,7 +648,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setAdminTab('sent'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('sent'); setSelectedEmail(null); }}
                   className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'sent' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
@@ -639,7 +662,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setAdminTab('archive'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('archive'); setSelectedEmail(null); }}
                   className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'archive' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
@@ -653,7 +676,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setAdminTab('users'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('users'); setSelectedEmail(null); }}
                   className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'users' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
@@ -667,7 +690,7 @@ export default function Home() {
                 </button>
                 
                 <button
-                  onClick={() => { setAdminTab('statistics'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('statistics'); setSelectedEmail(null); }}
                   className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'statistics' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
@@ -681,7 +704,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setAdminTab('scheduled'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('scheduled'); setSelectedEmail(null); }}
                   className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'scheduled' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
@@ -695,7 +718,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setAdminTab('scheduled-manage'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('scheduled-manage'); setSelectedEmail(null); }}
                   className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'scheduled-manage' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
@@ -709,7 +732,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setAdminTab('settings'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('settings'); setSelectedEmail(null); }}
                   className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[13px] transition-all shrink-0 ${
                     adminTab === 'settings' 
                       ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
@@ -1275,13 +1298,33 @@ export default function Home() {
         /* 2. 로그인 유저용 메인 대시보드 (Gmail 감성 미니멀 Layout) */
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-screen pt-0 bg-[#F6F8FC] dark:bg-slate-950">
           
+          {/* 모바일 햄버거 헤더 */}
+          <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#F6F8FC] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30">
+            <button
+              onClick={() => { handleLogout(); setAuthMode('home'); }}
+              className="flex items-center space-x-2.5 hover:opacity-75 transition-opacity"
+            >
+              <span className="w-6 h-6 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-xs font-black shadow-sm">5</span>
+              <span className="text-xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
+            </button>
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 -mr-2 text-slate-600 dark:text-slate-300">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isMobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
+
           {/* A. 좌측 사이드바 (사이드 네비게이션) */}
-          <aside className="w-full md:w-[260px] bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex flex-row md:flex-col justify-start md:justify-between shrink-0 p-3 overflow-x-auto md:overflow-visible z-20 hide-scrollbar border-b md:border-b-0 border-slate-200 dark:border-slate-800">
-            <div className="flex flex-row md:flex-col items-center md:items-stretch space-x-4 md:space-x-0 md:space-y-4 w-max md:w-auto">
-              {/* 로고 영역 - 클릭 시 홈으로 이동 */}
+          <aside className={`${isMobileMenuOpen ? 'flex absolute inset-0 top-[57px] bg-[#F6F8FC] dark:bg-slate-950 z-40' : 'hidden'} md:flex md:static w-full md:w-[260px] bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex-col justify-start md:justify-between shrink-0 p-4 md:p-3 overflow-y-auto z-20 hide-scrollbar border-b md:border-b-0 border-slate-200 dark:border-slate-800`}>
+            <div className="flex flex-col space-y-4 w-full">
+              {/* 로고 영역 - 데스크탑 전용 */}
               <button
                 onClick={() => { handleLogout(); setAuthMode('home'); }}
-                className="flex items-center space-x-2.5 px-3 py-2 md:py-4 hover:opacity-75 transition-opacity cursor-pointer w-auto md:w-full text-left shrink-0"
+                className="hidden md:flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left shrink-0"
               >
                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
                 <span className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
@@ -1291,7 +1334,7 @@ export default function Home() {
               {/* Compose 신규 메일 쓰기 버튼 (지메일 스타일 - 색상 배제 및 은은한 보더형) */}
               <div className="px-1.5 mt-0 md:mt-2 mb-0 md:mb-2 shrink-0 flex items-center">
                 <button
-                  onClick={() => { setSelectedEmail(null); setUserTab('compose'); }}
+                  onClick={() => { setSelectedEmail(null); setUserTab('compose'); setIsMobileMenuOpen(false); }}
                   className="ml-0 md:ml-3 pl-3 pr-6 py-2 md:py-4 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-medium rounded-2xl text-[14px] transition-all flex items-center space-x-2 md:space-x-3 shadow-sm w-fit"
                 >
                   <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1302,9 +1345,9 @@ export default function Home() {
               </div>
 
               {/* 네비게이션 메뉴 (흑백 아이콘 및 100% 한글 명칭 통일) */}
-              <nav className="flex flex-row md:flex-col items-center md:items-stretch space-x-1 md:space-x-0 md:space-y-0 px-1.5 shrink-0 pr-4 md:pr-0">
+              <nav className="flex flex-col space-y-0 px-1.5 shrink-0 pr-0">
                 <button
-                  onClick={() => { setUserTab('inbox'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('inbox'); setSelectedEmail(null); }}
                   className={`w-auto md:w-full flex items-center justify-between px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'inbox' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
@@ -1325,7 +1368,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setUserTab('archive'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('archive'); setSelectedEmail(null); }}
                   className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'archive' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
@@ -1339,7 +1382,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setUserTab('sent'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('sent'); setSelectedEmail(null); }}
                   className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'sent' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
@@ -1353,7 +1396,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setUserTab('statistics'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('statistics'); setSelectedEmail(null); }}
                   className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'statistics' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
@@ -1367,7 +1410,7 @@ export default function Home() {
                 </button>
 
                 <button
-                  onClick={() => { setUserTab('settings'); setSelectedEmail(null); }}
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('settings'); setSelectedEmail(null); }}
                   className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'settings' 
                       ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
