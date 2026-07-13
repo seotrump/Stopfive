@@ -305,13 +305,13 @@ export default function Home() {
   });
   const adminUsersList = allUsers.filter(u => u.role !== 'admin');
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="h-[100dvh] overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       
 
 
-      {/* 1. 비로그인 유저용 초프리미엄 웰컴 랜딩 페이지 */}
-      {!currentUser ? (
-        <div className="flex-1 flex flex-col">
+      {/* 1. 비로그인 유저 및 홈 화면 */}
+      {(authMode === 'home' || !currentUser) ? (
+        <div className="flex-1 flex flex-col overflow-y-auto hide-scrollbar">
 
           {/* 로그인 화면 */}
           {authMode === 'login' && (
@@ -481,18 +481,29 @@ export default function Home() {
               <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">StopFive</span>
             </div>
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setAuthMode('login')}
-                className="px-4 py-1.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#202124] dark:text-white text-xs font-bold rounded-full transition-all"
-              >
-                로그인
-              </button>
-              <button
-                onClick={() => setAuthMode('register')}
-                className="px-4 py-1.5 bg-[#202124] hover:bg-slate-800 text-white text-xs font-bold rounded-full transition-all"
-              >
-                회원가입
-              </button>
+              {currentUser ? (
+                <button
+                  onClick={() => setAuthMode('dashboard')}
+                  className="px-4 py-1.5 bg-[#202124] hover:bg-slate-800 text-white text-xs font-bold rounded-full transition-all"
+                >
+                  내 대시보드로 가기
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setAuthMode('login')}
+                    className="px-4 py-1.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#202124] dark:text-white text-xs font-bold rounded-full transition-all"
+                  >
+                    로그인
+                  </button>
+                  <button
+                    onClick={() => setAuthMode('register')}
+                    className="px-4 py-1.5 bg-[#202124] hover:bg-slate-800 text-white text-xs font-bold rounded-full transition-all"
+                  >
+                    회원가입
+                  </button>
+                </>
+              )}
             </div>
           </header>
 
@@ -596,18 +607,29 @@ export default function Home() {
 
             {/* CTA 버튼 영역 */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
-              <button
-                onClick={() => setAuthMode('register')}
-                className="px-8 py-3.5 bg-[#202124] hover:bg-slate-800 text-white font-bold rounded-full text-sm transition-all"
-              >
-                3일 체험 코스 시작하기
-              </button>
-              <button
-                onClick={() => setAuthMode('login')}
-                className="px-8 py-3.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-bold rounded-full text-sm transition-all"
-              >
-                기존 계정으로 로그인
-              </button>
+              {currentUser ? (
+                <button
+                  onClick={() => setAuthMode('dashboard')}
+                  className="px-8 py-3.5 bg-[#202124] hover:bg-slate-800 text-white font-bold rounded-full text-sm transition-all"
+                >
+                  내 대시보드로 돌아가기
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setAuthMode('register')}
+                    className="px-8 py-3.5 bg-[#202124] hover:bg-slate-800 text-white font-bold rounded-full text-sm transition-all"
+                  >
+                    3일 체험 코스 시작하기
+                  </button>
+                  <button
+                    onClick={() => setAuthMode('login')}
+                    className="px-8 py-3.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-bold rounded-full text-sm transition-all"
+                  >
+                    기존 계정으로 로그인
+                  </button>
+                </>
+              )}
             </div>
           </main>
           </>
@@ -619,7 +641,7 @@ export default function Home() {
           {/* 모바일 햄버거 헤더 */}
           <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#F6F8FC] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30">
             <button
-              onClick={() => { setIsMobileMenuOpen(false); setAdminTab('inbox'); setSelectedEmail(null); }}
+              onClick={() => { setIsMobileMenuOpen(false); setAuthMode('home'); }}
               className="flex items-center space-x-2.5 hover:opacity-75 transition-opacity"
             >
               <span className="w-6 h-6 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-xs font-black shadow-sm">5</span>
@@ -641,7 +663,7 @@ export default function Home() {
             <div className="flex flex-col space-y-4 w-full">
               {/* 로고 영역 - 데스크탑 전용 */}
               <button
-                onClick={() => { setAdminTab('inbox'); setSelectedEmail(null); }}
+                onClick={() => setAuthMode('home')}
                 className="hidden md:flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left shrink-0"
               >
                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
@@ -1390,7 +1412,7 @@ export default function Home() {
           {/* 모바일 햄버거 헤더 */}
           <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#F6F8FC] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30">
             <button
-              onClick={() => { setIsMobileMenuOpen(false); setUserTab('inbox'); setSelectedEmail(null); }}
+              onClick={() => { setIsMobileMenuOpen(false); setAuthMode('home'); }}
               className="flex items-center space-x-2.5 hover:opacity-75 transition-opacity"
             >
               <span className="w-6 h-6 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-xs font-black shadow-sm">5</span>
@@ -1412,7 +1434,7 @@ export default function Home() {
             <div className="flex flex-col space-y-4 w-full">
               {/* 로고 영역 - 데스크탑 전용 */}
               <button
-                onClick={() => { setUserTab('inbox'); setSelectedEmail(null); }}
+                onClick={() => setAuthMode('home')}
                 className="hidden md:flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left shrink-0"
               >
                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
@@ -1580,7 +1602,7 @@ export default function Home() {
             </header>
 
             {/* 메인 탭 뷰어 */}
-            <main className="flex-1 flex flex-col overflow-hidden">
+            <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {selectedEmail ? (
                 /* 메일 상세 읽기 화면 (지메일과 완전히 동일한 UI 감성, 선명한 고대비 타이포그래피) */
                 <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
@@ -2055,7 +2077,7 @@ export default function Home() {
                 </div>
               ) : (
                 /* 메일 목록 리스트 (Inbox, Archive, Sent) - 지메일 스타일 */
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">
                       {userTab} ({userFiltered.length})
