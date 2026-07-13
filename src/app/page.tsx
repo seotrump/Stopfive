@@ -20,7 +20,8 @@ import {
   getScheduledEmails,
   createScheduledEmail,
   cancelScheduledEmail,
-  markEmailAsArchived
+  markEmailAsArchived,
+  processScheduledEmails
 } from '../lib/db';
 const ITEMS_PER_PAGE = 20;
 
@@ -115,6 +116,23 @@ export default function Home() {
       setAllUsers(await getAllUsers());
     };
     fetchData();
+
+    // 예약 메일 백그라운드 처리 (1분마다 체크)
+    const interval = setInterval(async () => {
+      const sentCount = await processScheduledEmails();
+      if (sentCount > 0) {
+        // 메일이 발송되었다면 현재 화면의 메일 목록도 새로고침
+        const user = await getCurrentUser();
+        if (user) {
+          setEmails(await getLocalEmails(user.virtualEmail));
+        }
+      }
+    }, 60000);
+    
+    // 초기 1회 실행
+    processScheduledEmails();
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -860,11 +878,10 @@ export default function Home() {
                                 {adminTab === 'sent' ? email.receiver.split('@')[0] : email.sender.split('@')[0]}
                               </span>
                             </div>
-                            <div className="flex-1 min-w-0 flex items-center space-x-2 pl-2 text-xs">
-                              <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}>
+                            <div className="flex-1 min-w-0 pl-2 text-xs">
+                              <div className={`truncate ${isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}`}>
                                 {email.subject}
-                              </span>
-                              <span className="text-slate-400 truncate font-light">— {email.body}</span>
+                              </div>
                             </div>
                             <div className="w-24 text-right shrink-0 text-[11px] hidden md:block">
                               <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
@@ -2013,11 +2030,10 @@ export default function Home() {
                                     : (email.sender === 'team@stopfive.com' ? 'StopFive Team' : email.sender.split('@')[0])}
                                 </span>
                               </div>
-                              <div className="flex-1 min-w-0 flex items-center space-x-2 pr-6 text-sm">
-                                <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}>
+                              <div className="flex-1 min-w-0 pr-6 text-sm">
+                                <div className={`truncate ${isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}`}>
                                   {email.subject}
-                                </span>
-                                <span className="text-slate-400 truncate font-light text-[13px]">— {email.body}</span>
+                                </div>
                               </div>
                               <div className="w-20 text-right shrink-0 text-xs hidden md:block">
                                 <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>

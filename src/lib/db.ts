@@ -332,3 +332,38 @@ export const cancelScheduledEmail = async (id: string): Promise<boolean> => {
   }
   return true;
 };
+
+export const processScheduledEmails = async (): Promise<number> => {
+  const date = new Date();
+  const offset = date.getTimezoneOffset() * 60000;
+  const now = (new Date(date.getTime() - offset)).toISOString().slice(0, 19);
+  
+  const { data: pending, error } = await supabase.from('scheduled_emails')
+    .select('*')
+    .eq('status', 'pending')
+    .lte('scheduled_at', now);
+    
+  if (error || !pending || pending.length === 0) return 0;
+  
+  let sent = 0;
+  for (const item of pending) {
+    const { data: user } = await supabase.from('users').select('id').eq('virtual_email', item.receiver_virtual_email).single();
+    if (!user) continue;
+    
+    const { error: insertError } = await supabase.from('emails').insert([{
+      user_id: user.id,
+      sender: 'team@stopfive.com',
+      receiver: item.receiver_virtual_email,
+      subject: item.subject,
+      body: item.body,
+      status: 'unread',
+      is_system_mission: false
+    }]);
+    
+    if (!insertError) {
+      await supabase.from('scheduled_emails').update({ status: 'sent' }).eq('id', item.id);
+      sent++;
+    }
+  }
+  return sent;
+};
