@@ -107,11 +107,20 @@ export default function Home() {
     title: ''
   });
 
+  const [isAuthModeLoaded, setIsAuthModeLoaded] = useState(false);
+
   // 초기 로딩
   useEffect(() => {
+    // 1. await 전에 동기적으로 읽어둡니다.
+    const savedMode = sessionStorage.getItem('authMode');
+    
+    // 깜빡임 방지를 위해 즉시 모드 복구 시도 (currentUser 로드 전이므로 임시)
+    if (savedMode && savedMode !== 'home') {
+      setAuthMode(savedMode as any);
+    }
+
     const fetchData = async () => {
       const user = await getCurrentUser();
-      const savedMode = sessionStorage.getItem('authMode');
       
       if (user) {
         setCurrentUser(user);
@@ -129,6 +138,7 @@ export default function Home() {
         }
       }
       setAllUsers(await getAllUsers());
+      setIsAuthModeLoaded(true); // 읽기 및 세팅이 끝났음을 알림
     };
     fetchData();
 
@@ -151,8 +161,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    sessionStorage.setItem('authMode', authMode);
-  }, [authMode]);
+    if (isAuthModeLoaded) {
+      sessionStorage.setItem('authMode', authMode);
+    }
+  }, [authMode, isAuthModeLoaded]);
 
   useEffect(() => {
     if (currentUser) {
