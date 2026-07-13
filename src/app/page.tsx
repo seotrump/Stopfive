@@ -1414,10 +1414,10 @@ export default function Home() {
                   {/* 상단 고정 리스트 헤더 */}
                   <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                     <div className="w-14 sm:w-20 shrink-0 pl-2">상태</div>
+                    <div className="w-16 shrink-0 pl-2">관리</div>
                     <div className="w-40 shrink-0 pl-2 hidden sm:block">수신자</div>
                     <div className="flex-1 min-w-0 pl-2">제목</div>
                     <div className="w-44 shrink-0 pl-2 hidden md:block">예약일시</div>
-                    <div className="w-16 text-right shrink-0">관리</div>
                   </div>
                   <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                     {scheduledEmails.length === 0 ? (
@@ -1427,25 +1427,15 @@ export default function Home() {
                     ) : (
                       scheduledEmails.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((se) => (
                         <div key={se.id} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-xs">
-                          <div className="w-14 sm:w-20 shrink-0 pl-2 font-bold">
+                          {/* 1. 상태 */}
+                          <div className={`w-14 sm:w-20 shrink-0 pl-2 ${se.status === 'pending' ? 'font-bold' : 'font-normal'}`}>
                             <span className={se.status === 'pending' ? 'text-amber-600' : se.status === 'sent' ? 'text-emerald-600' : 'text-slate-500'}>
                               {se.status === 'pending' ? '대기' : se.status === 'sent' ? '완료' : '취소됨'}
                             </span>
                           </div>
-                          <div className="w-40 shrink-0 pl-2 font-medium text-slate-700 dark:text-slate-300 truncate hidden sm:block">
-                            {se.receiverVirtualEmail ? se.receiverVirtualEmail.split('@')[0] : '알수없음'}
-                          </div>
-                          <div 
-                            className="flex-1 min-w-0 pl-2 text-slate-800 dark:text-slate-200 truncate font-semibold cursor-pointer hover:text-[#1A73E8] hover:underline"
-                            onClick={() => setSelectedScheduledEmail(se)}
-                          >
-                            {se.subject}
-                          </div>
-                          <div className="w-44 shrink-0 pl-2 text-slate-500 truncate hidden md:block font-medium">
-                            {formatDateTime(se.scheduledAt)}
-                          </div>
-                          <div className="w-16 text-right shrink-0">
-                            {se.status === 'pending' && (
+                          {/* 2. 관리 (상태 다음자리) */}
+                          <div className="w-16 shrink-0 pl-2 flex items-center">
+                            {se.status === 'pending' ? (
                               <button
                                 onClick={async () => {
                                   if (confirm("이 예약 메일 발송을 취소하시겠습니까?")) {
@@ -1456,11 +1446,28 @@ export default function Home() {
                                     }
                                   }
                                 }}
-                                className="text-[11px] font-bold text-red-500 hover:text-red-700"
+                                className="font-bold text-red-500 hover:text-red-700 text-left cursor-pointer"
                               >
                                 취소
                               </button>
+                            ) : (
+                              <span className="font-normal text-slate-300 dark:text-slate-700">-</span>
                             )}
+                          </div>
+                          {/* 3. 수신자 */}
+                          <div className={`w-40 shrink-0 pl-2 truncate hidden sm:block ${se.status === 'pending' ? 'font-bold text-slate-800 dark:text-slate-200' : 'font-normal text-slate-500 dark:text-slate-400'}`}>
+                            {se.receiverVirtualEmail ? se.receiverVirtualEmail.split('@')[0] : '알수없음'}
+                          </div>
+                          {/* 4. 제목 */}
+                          <div 
+                            className={`flex-1 min-w-0 pl-2 truncate cursor-pointer hover:text-[#1A73E8] hover:underline ${se.status === 'pending' ? 'font-bold text-slate-900 dark:text-white' : 'font-normal text-slate-700 dark:text-slate-350'}`}
+                            onClick={() => setSelectedScheduledEmail(se)}
+                          >
+                            {se.subject}
+                          </div>
+                          {/* 5. 예약일시 */}
+                          <div className={`w-44 shrink-0 pl-2 truncate hidden md:block ${se.status === 'pending' ? 'font-bold text-slate-700 dark:text-slate-300' : 'font-normal text-slate-450 dark:text-slate-500'}`}>
+                            {formatDateTime(se.scheduledAt)}
                           </div>
                         </div>
                       ))
