@@ -1299,7 +1299,7 @@ export default function Home() {
                         return;
                       }
                       
-                      const scheduleDateStr = `${scheduledDate}T${scheduledTime}:00`;
+                      const scheduleDateStr = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
                       const targetUser = allUsers.find(u => u.virtualEmail === scheduledTo);
                       const receiverName = targetUser ? targetUser.name : 'Unknown';
 

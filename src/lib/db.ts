@@ -334,9 +334,7 @@ export const cancelScheduledEmail = async (id: string): Promise<boolean> => {
 };
 
 export const processScheduledEmails = async (): Promise<number> => {
-  const date = new Date();
-  const offset = date.getTimezoneOffset() * 60000;
-  const now = (new Date(date.getTime() - offset)).toISOString().slice(0, 19);
+  const now = new Date().toISOString();
   
   const { data: pending, error } = await supabase.from('scheduled_emails')
     .select('*')
