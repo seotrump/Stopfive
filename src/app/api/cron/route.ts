@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { processScheduledEmails } from '../../../lib/db';
+import { processScheduledEmails, processExpiredEmails } from '../../../lib/db';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,10 +16,12 @@ export async function GET(request: Request) {
 
   try {
     const sentCount = await processScheduledEmails();
+    const expiredCount = await processExpiredEmails();
     return NextResponse.json({
       success: true,
-      message: `Successfully processed scheduled emails.`,
+      message: `Processed scheduled emails.`,
       sentCount,
+      expiredCount,
     });
   } catch (error: any) {
     console.error('Error during scheduled emails processing:', error);

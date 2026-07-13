@@ -20,7 +20,8 @@ import {
   getScheduledEmails,
   createScheduledEmail,
   cancelScheduledEmail,
-  markEmailAsArchived
+  markEmailAsArchived,
+  expireEmail
 } from '../lib/db';
 const ITEMS_PER_PAGE = 20;
 
@@ -79,6 +80,7 @@ export default function Home() {
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledHour, setScheduledHour] = useState('09');
   const [scheduledMinute, setScheduledMinute] = useState('00');
+  const [scheduledTimeoutLimit, setScheduledTimeoutLimit] = useState(false);
   const [selectedScheduledEmail, setSelectedScheduledEmail] = useState<any>(null);
 
   const formatDateTime = (dateStr: string) => {
@@ -301,14 +303,26 @@ export default function Home() {
   // 메일 읽기 선택 핸들러
   const handleSelectEmail = async (email: any) => {
     if (!currentUser) return;
-    const local = await getLocalEmails(currentUser.virtualEmail);
-    const found = local.find((e: any) => e.id === email.id);
-    if (found && found.status === 'unread' && found.receiver === currentUser.virtualEmail) {
-      found.status = 'archived';
-      await markEmailAsArchived(found.id);
-      setEmails(local);
+    
+    // 5분 만료 실시간 체크
+    const isTimeout = email.isTimeoutLimit && email.status === 'unread' && (new Date().getTime() - new Date(email.createdAt).getTime() > 5 * 60 * 1000);
+    let finalStatus = email.status;
+    
+    if (isTimeout) {
+      finalStatus = 'expired';
+      await expireEmail(email.id);
+    } else {
+      const local = await getLocalEmails(currentUser.virtualEmail);
+      const found = local.find((e: any) => e.id === email.id);
+      if (found && found.status === 'unread' && found.receiver === currentUser.virtualEmail) {
+        found.status = 'archived';
+        await markEmailAsArchived(found.id);
+        setEmails(local);
+        finalStatus = 'archived';
+      }
     }
-    setSelectedEmail({ ...email, status: found ? found.status : email.status });
+    
+    setSelectedEmail({ ...email, status: finalStatus });
     setReplySubject(email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`);
   };
 
@@ -1309,7 +1323,8 @@ export default function Home() {
                         receiverName,
                         scheduledSubject,
                         scheduledBody,
-                        scheduleDateStr
+                        scheduleDateStr,
+                        scheduledTimeoutLimit
                       );
                       
                       if (success) {
@@ -1320,6 +1335,7 @@ export default function Home() {
                         setScheduledDate('');
                         setScheduledHour('09');
                         setScheduledMinute('00');
+                        setScheduledTimeoutLimit(false);
                         setAdminTab('scheduled-manage');
                         setSelectedEmail(null);
                       } else {
@@ -1384,6 +1400,20 @@ export default function Home() {
                             </select>
                           </div>
                         </div>
+                      </div>
+
+                      {/* 5분 제한 옵션 */}
+                      <div className="flex items-center space-x-2 py-2">
+                        <input
+                          id="timeout_limit"
+                          type="checkbox"
+                          checked={scheduledTimeoutLimit}
+                          onChange={(e) => setScheduledTimeoutLimit(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="timeout_limit" className="text-sm font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
+                          5분 제한 미션으로 설정 (발송 후 5분 내에 읽지 않으면 만료 처리)
+                        </label>
                       </div>
 
                       {/* 제목 */}
@@ -1776,11 +1806,20 @@ export default function Home() {
 
                     {/* 본문 영역 - 크게 키우고 선명하게 변경 */}
                     <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-[#202124] dark:text-slate-100 font-normal">
-                      {selectedEmail.body}
+                      {selectedEmail.status === 'expired' ? (
+                        <div className="p-6 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm flex flex-col items-center space-y-2">
+                          <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <span className="text-center">⚠️ 본 미션은 발송 후 5분 내에 열람하지 않아 만료되었습니다. (본문 열람 불가)</span>
+                        </div>
+                      ) : (
+                        selectedEmail.body
+                      )}
                     </div>
 
                     {/* 미답장 미션 메일인 경우 대형 답장창 제공 */}
-                    {selectedEmail.receiver === currentUser.virtualEmail && !selectedEmail.replyContent && (
+                    {selectedEmail.receiver === currentUser.virtualEmail && !selectedEmail.replyContent && selectedEmail.status !== 'expired' && (
                       <form onSubmit={handleSendReply} className="border-t border-slate-100 dark:border-slate-850 pt-6 space-y-4">
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">

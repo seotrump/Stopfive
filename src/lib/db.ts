@@ -287,7 +287,8 @@ function mapEmailFromDb(row: any): EmailMessage {
     missionDate: row.mission_date,
     createdAt: row.created_at,
     answeredAt: row.answered_at,
-    replyContent: row.reply_content
+    replyContent: row.reply_content,
+    isTimeoutLimit: row.is_timeout_limit
   };
 }
 
@@ -305,17 +306,26 @@ export const getScheduledEmails = async (): Promise<ScheduledEmail[]> => {
     body: row.body,
     scheduledAt: row.scheduled_at,
     status: row.status,
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    isTimeoutLimit: row.is_timeout_limit
   }));
 };
 
-export const createScheduledEmail = async (receiverVirtualEmail: string, receiverName: string, subject: string, body: string, scheduledAt: string): Promise<boolean> => {
+export const createScheduledEmail = async (
+  receiverVirtualEmail: string,
+  receiverName: string,
+  subject: string,
+  body: string,
+  scheduledAt: string,
+  isTimeoutLimit: boolean = false
+): Promise<boolean> => {
   const { error } = await supabase.from('scheduled_emails').insert([{
     receiver_virtual_email: receiverVirtualEmail,
     receiver_name: receiverName,
     subject,
     body,
-    scheduled_at: scheduledAt
+    scheduled_at: scheduledAt,
+    is_timeout_limit: isTimeoutLimit
   }]);
   if (error) {
     console.error('Error creating scheduled email:', error);
@@ -355,7 +365,8 @@ export const processScheduledEmails = async (): Promise<number> => {
       subject: item.subject,
       body: item.body,
       status: 'unread',
-      is_system_mission: false
+      is_system_mission: false,
+      is_timeout_limit: item.is_timeout_limit
     }]);
     
     if (!insertError) {
@@ -364,4 +375,32 @@ export const processScheduledEmails = async (): Promise<number> => {
     }
   }
   return sent;
+};
+
+export const processExpiredEmails = async (): Promise<number> => {
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  
+  const { data, error } = await supabase.from('emails')
+    .update({ status: 'expired' })
+    .eq('status', 'unread')
+    .eq('is_timeout_limit', true)
+    .lte('created_at', fiveMinutesAgo)
+    .select();
+    
+  if (error) {
+    console.error('Error processing expired emails:', error);
+    return 0;
+  }
+  return data ? data.length : 0;
+};
+
+export const expireEmail = async (emailId: string): Promise<boolean> => {
+  const { error } = await supabase.from('emails')
+    .update({ status: 'expired' })
+    .eq('id', emailId);
+  if (error) {
+    console.error('Error expiring email:', error);
+    return false;
+  }
+  return true;
 };

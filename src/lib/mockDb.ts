@@ -23,7 +23,7 @@ export interface EmailMessage {
   receiver: string;
   subject: string;
   body: string;
-  status: 'unread' | 'read' | 'archived';
+  status: 'unread' | 'read' | 'archived' | 'expired';
   isSystemMission: boolean;
   missionDate: string | null; // YYYY-MM-DD
   createdAt: string;
@@ -31,6 +31,7 @@ export interface EmailMessage {
   replyContent: string | null;
   isCourseMission?: boolean;
   courseStepIndex?: number;
+  isTimeoutLimit?: boolean;
 }
 
 export interface ScheduledEmail {
@@ -42,6 +43,7 @@ export interface ScheduledEmail {
   scheduledAt: string; // ISO datetime YYYY-MM-DDTHH:MM
   status: 'pending' | 'sent' | 'cancelled';
   createdAt: string;
+  isTimeoutLimit?: boolean;
 }
 
 // 5초 ~ 1분 이내에 행동할 수 있는 즉각적인 행동 미션 라이브러리
