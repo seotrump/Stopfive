@@ -187,30 +187,14 @@ export default function Home() {
     };
     fetchData();
 
-    // 30초마다 DB 체크 + 크론 API 호출 (예약 메일 처리 및 만료 처리)
-    const interval = setInterval(async () => {
-      try {
-        if (currentUser && currentUser.virtualEmail) {
-          // 크론 API 호출: 예약 메일 발송 + 5분 초과 만료 처리
-          await fetch('/api/cron').catch(() => {});
-          // 메일 목록 최신화
-          const freshEmails = await getLocalEmails(currentUser.virtualEmail);
-          if (freshEmails) {
-            setEmails(freshEmails);
-          }
-        }
-      } catch (err) {
-        console.error("Poller tick error:", err);
-      }
-    }, 30000);
-
     // 10초마다 강제 리렌더링 → 이미 로드된 이메일의 만료시간 계산을 즉시 재실행
+    // (예약 메일 발송 및 DB 만료 처리는 Supabase pg_cron이 1분마다 서버 측에서 처리)
     const renderInterval = setInterval(() => {
       setForceRender(n => n + 1);
     }, 10000);
 
-    return () => { clearInterval(interval); clearInterval(renderInterval); };
-  }, [currentUser]);
+    return () => { clearInterval(renderInterval); };
+  }, []);
 
   useEffect(() => {
     if (isAuthModeLoaded) {
