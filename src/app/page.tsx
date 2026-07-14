@@ -2421,8 +2421,8 @@ export default function Home() {
                         <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-[14px] font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                           <div className="w-8 shrink-0 flex items-center justify-center"></div>
                           <div className="w-40 shrink-0 pr-4 hidden sm:block">{userTab === 'sent' ? '받는사람' : '보낸사람'}</div>
-                          <div className="flex-1 min-w-0 pr-6">제목 및 내용</div>
-                          <div className="w-20 text-right shrink-0 hidden md:block">날짜</div>
+                          <div className="flex-1 min-w-0 pr-6">제목</div>
+                          <div className="w-44 text-right shrink-0 hidden md:block">도착일시</div>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
                         {userFiltered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((email) => {
@@ -2473,9 +2473,9 @@ export default function Home() {
                                   {email.subject}
                                 </div>
                               </div>
-                              <div className="w-20 text-right shrink-0 text-[14px] hidden md:block">
+                              <div className="w-44 text-right shrink-0 text-[14px] hidden md:block">
                                 <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
-                                  {new Date(email.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                  {formatDateTime(email.createdAt)}
                                 </span>
                               </div>
                             </div>
