@@ -2330,19 +2330,7 @@ export default function Home() {
                       </span>
                     </div>
 
-                    {/* 5분 타임아웃 미션 참여 여부 */}
-                    <div className="flex items-center space-x-2 py-2 border-t border-slate-100 dark:border-slate-800/60 pt-4">
-                      <input
-                        id="user_use_timeout"
-                        type="checkbox"
-                        checked={useTimeoutMissionsSetting}
-                        onChange={(e) => setUseTimeoutMissionsSetting(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
-                      />
-                      <label htmlFor="user_use_timeout" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                        5분 타임아웃 미션 참여 (체크 해제 시 일반 미션으로 발송됨)
-                      </label>
-                    </div>
+
 
                     <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-4">
                       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Change Password (비밀번호 변경)</h3>
