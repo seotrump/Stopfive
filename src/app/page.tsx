@@ -55,7 +55,7 @@ const Pagination = ({ total, current, onChange }: { total: number, current: numb
 export default function Home() {
   // 사용자 및 내비게이션 상태
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userTab, setUserTab] = useState<'inbox' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose'>('inbox');
+  const [userTab, setUserTab] = useState<'inbox' | 'missions' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose'>('inbox');
   const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose' | 'scheduled' | 'scheduled-manage' | 'inbox' | 'sent' | 'archive' | 'settings'>('inbox');
   const [emails, setEmails] = useState<any[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
@@ -342,13 +342,18 @@ export default function Home() {
     const isAdmin = currentUser.role === 'admin';
     
     return emails.filter((email: any) => {
+      const isMission = email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission;
       if (userTab === 'inbox') {
-        // 읽지 않았거나 읽었으나 아직 답장하지 않은 미션 메일들
-        return email.receiver === currentUser.virtualEmail && email.status !== 'archived';
+        // 일반 메일만 받은편지함에 노출 (미션 메일 제외)
+        return email.receiver === currentUser.virtualEmail && email.status !== 'archived' && !isMission;
       }
       if (userTab === 'archive') {
-        // 이미 답장했거나 아카이브된 메일들
-        return email.receiver === currentUser.virtualEmail && email.status === 'archived';
+        // 이미 답장했거나 아카이브된 일반 메일들
+        return email.receiver === currentUser.virtualEmail && email.status === 'archived' && !isMission;
+      }
+      if (userTab === 'missions') {
+        // 미션 메일만 미션관리함에 노출
+        return email.receiver === currentUser.virtualEmail && isMission;
       }
       if (userTab === 'sent') {
         // 본인이 발신한 메일들
@@ -1646,9 +1651,30 @@ export default function Home() {
                     </svg>
                     <span>받은편지함</span>
                   </div>
-                  {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived').length > 0 && (
+                  {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived' && !(e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission)).length > 0 && (
                     <span className="text-[#202124] dark:text-white text-xs font-bold pl-2 md:px-1">
-                      {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived').length}
+                      {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived' && !(e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission)).length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('missions'); setSelectedEmail(null); }}
+                  className={`w-auto md:w-full flex items-center justify-between px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
+                    userTab === 'missions' 
+                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2 md:space-x-3">
+                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <span>미션관리함</span>
+                  </div>
+                  {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && (e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission) && e.status === 'unread').length > 0 && (
+                    <span className="text-[#202124] dark:text-white text-xs font-bold pl-2 md:px-1">
+                      {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && (e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission) && e.status === 'unread').length}
                     </span>
                   )}
                 </button>
@@ -2330,7 +2356,22 @@ export default function Home() {
                                     : (email.sender === 'team@stopfive.com' ? 'StopFive Team' : email.sender.split('@')[0])}
                                 </span>
                               </div>
-                              <div className="flex-1 min-w-0 pr-6 text-[14px]">
+                              <div className="flex-1 min-w-0 pr-6 text-[14px] flex items-center gap-2">
+                                {(email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission) && (
+                                  email.status === 'expired' ? (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 rounded shrink-0">
+                                      만료
+                                    </span>
+                                  ) : email.status === 'archived' ? (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 rounded shrink-0">
+                                      완료
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 rounded shrink-0 animate-pulse">
+                                      진행중
+                                    </span>
+                                  )
+                                )}
                                 <div className={`truncate ${isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}`}>
                                   {email.subject}
                                 </div>
