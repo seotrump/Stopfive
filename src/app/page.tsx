@@ -189,14 +189,18 @@ export default function Home() {
 
     // 30초마다 DB 체크 + 크론 API 호출 (예약 메일 처리 및 만료 처리)
     const interval = setInterval(async () => {
-      const user = await getCurrentUser();
-      if (user) {
-        // 크론 API 호출: 예약 메일 발송 + 5분 초과 만료 처리
-        try {
-          await fetch('/api/cron');
-        } catch {}
-        // 메일 목록 최신화
-        setEmails(await getLocalEmails(user.virtualEmail));
+      try {
+        if (currentUser && currentUser.virtualEmail) {
+          // 크론 API 호출: 예약 메일 발송 + 5분 초과 만료 처리
+          await fetch('/api/cron').catch(() => {});
+          // 메일 목록 최신화
+          const freshEmails = await getLocalEmails(currentUser.virtualEmail);
+          if (freshEmails) {
+            setEmails(freshEmails);
+          }
+        }
+      } catch (err) {
+        console.error("Poller tick error:", err);
       }
     }, 30000);
 
@@ -206,7 +210,7 @@ export default function Home() {
     }, 10000);
 
     return () => { clearInterval(interval); clearInterval(renderInterval); };
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (isAuthModeLoaded) {
