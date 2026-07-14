@@ -84,6 +84,7 @@ export default function Home() {
   const [scheduledForceTimeout, setScheduledForceTimeout] = useState(false);
   const [useTimeoutMissionsSetting, setUseTimeoutMissionsSetting] = useState(true);
   const [settingsSuccessMessage, setSettingsSuccessMessage] = useState('');
+  const [, setForceRender] = useState(0); // 10초마다 강제 리렌더링 (만료 계산 재실행용)
   const [selectedScheduledEmail, setSelectedScheduledEmail] = useState<any>(null);
 
   useEffect(() => {
@@ -167,15 +168,20 @@ export default function Home() {
     };
     fetchData();
 
-    // 화면 메일 목록 동기화 (1분마다 체크)
+    // 화면 메일 목록 동기화 (30초마다 DB 체크)
     const interval = setInterval(async () => {
       const user = await getCurrentUser();
       if (user) {
         setEmails(await getLocalEmails(user.virtualEmail));
       }
-    }, 60000);
+    }, 30000);
 
-    return () => clearInterval(interval);
+    // 10초마다 강제 리렌더링 → 이미 로드된 이메일의 만료시간 계산을 즉시 재실행
+    const renderInterval = setInterval(() => {
+      setForceRender(n => n + 1);
+    }, 10000);
+
+    return () => { clearInterval(interval); clearInterval(renderInterval); };
   }, []);
 
   useEffect(() => {
@@ -313,23 +319,30 @@ export default function Home() {
   const handleSelectEmail = async (email: any) => {
     if (!currentUser) return;
     
-    // 5분 만료 실시간 체크
+    const isMissionEmail = email.sender?.toLowerCase() === 'team@stopfive.com' || email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission;
+
+    // 5분 만료 실시간 체크 (미션 메일이고 isTimeoutLimit이 켜진 경우만)
     const isTimeout = email.isTimeoutLimit && email.status === 'unread' && (new Date().getTime() - new Date(email.createdAt).getTime() > 5 * 60 * 1000);
     let finalStatus = email.status;
     
     if (isTimeout) {
+      // 만료된 미션 메일: DB에 expired로 기록하고 화면을 즉시 갱신
       finalStatus = 'expired';
       await expireEmail(email.id);
-    } else {
+      // emails 상태도 즉시 업데이트 (10초 타이머 기다리지 않고)
+      setEmails(prev => prev.map((e: any) => e.id === email.id ? { ...e, status: 'expired' } : e));
+    } else if (!isMissionEmail) {
+      // 일반 메일(팀 발송이 아닌 일반 유저간 메일)만 읽음/보관 처리
       const local = await getLocalEmails(currentUser.virtualEmail);
       const found = local.find((e: any) => e.id === email.id);
-      if (found && found.status === 'unread' && found.receiver === currentUser.virtualEmail) {
+      if (found && found.status === 'unread' && found.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase()) {
         found.status = 'archived';
         await markEmailAsArchived(found.id);
         setEmails(local);
         finalStatus = 'archived';
       }
     }
+    // 미션 메일(만료 안됨)은 클릭해도 archived 처리하지 않음 → 5분 타이머 계속 유지
     
     setSelectedEmail({ ...email, status: finalStatus });
     setReplySubject(email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`);
