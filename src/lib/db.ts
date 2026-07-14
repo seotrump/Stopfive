@@ -228,7 +228,6 @@ export const updateUserProfile = async (
 
   const updates: any = { delivery_time: deliveryTime.includes(':') && deliveryTime.length === 5 ? deliveryTime + ':00' : deliveryTime };
   if (name) updates.name = name;
-  if (useTimeoutMissions !== undefined) updates.use_timeout_missions = useTimeoutMissions;
 
   const { data, error } = await supabase.from('users')
     .update(updates)

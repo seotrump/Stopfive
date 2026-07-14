@@ -2280,7 +2280,7 @@ export default function Home() {
                       return;
                     }
                     
-                    const updated = await updateUserProfile(currentUser.virtualEmail, deliveryTime, name, settingsNewPassword || undefined, useTimeoutMissionsSetting);
+                    const updated = await updateUserProfile(currentUser.virtualEmail, deliveryTime, name, settingsNewPassword || undefined);
                     if (updated) {
                       setCurrentUser(updated);
                       setAllUsers(await getAllUsers());
