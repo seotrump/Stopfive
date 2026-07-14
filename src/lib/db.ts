@@ -376,7 +376,7 @@ export const processScheduledEmails = async (): Promise<number> => {
     // 만료 여부 최종 판단 (유저 설정 반영)
     // 1) 강제(is_force_timeout)인 경우 무조건 만료 제한 활성화
     // 2) 일반 제한인 경우 유저가 timeout 미션 참여 허용(use_timeout_missions)했을 때만 활성화
-    const finalTimeoutLimit = item.is_timeout_limit && (item.is_force_timeout || user.use_timeout_missions);
+    const finalTimeoutLimit = item.is_timeout_limit && (item.is_force_timeout || user.use_timeout_missions !== false);
     
     const { error: insertError } = await supabase.from('emails').insert([{
       user_id: user.id,
