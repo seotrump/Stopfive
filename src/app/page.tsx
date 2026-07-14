@@ -168,10 +168,15 @@ export default function Home() {
     };
     fetchData();
 
-    // 화면 메일 목록 동기화 (30초마다 DB 체크)
+    // 30초마다 DB 체크 + 크론 API 호출 (예약 메일 처리 및 만료 처리)
     const interval = setInterval(async () => {
       const user = await getCurrentUser();
       if (user) {
+        // 크론 API 호출: 예약 메일 발송 + 5분 초과 만료 처리
+        try {
+          await fetch('/api/cron');
+        } catch {}
+        // 메일 목록 최신화
         setEmails(await getLocalEmails(user.virtualEmail));
       }
     }, 30000);
