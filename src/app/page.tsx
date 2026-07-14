@@ -1356,7 +1356,8 @@ export default function Home() {
                         return;
                       }
                       
-                      const scheduleDateStr = new Date(`${scheduledDate}T${scheduledHour}:${scheduledMinute}:00`).toISOString();
+                      // 한국 시간대(+09:00) 기준으로 날짜 객체를 생성한 후 ISO로 변환하여 시간대 오차 방지
+                      const scheduleDateStr = new Date(`${scheduledDate}T${scheduledHour}:${scheduledMinute}:00+09:00`).toISOString();
                       const targetUser = allUsers.find(u => u.virtualEmail === scheduledTo);
                       const receiverName = targetUser ? targetUser.name : 'Unknown';
 
