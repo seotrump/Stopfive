@@ -83,6 +83,7 @@ export default function Home() {
   const [scheduledTimeoutLimit, setScheduledTimeoutLimit] = useState(false);
   const [scheduledForceTimeout, setScheduledForceTimeout] = useState(false);
   const [useTimeoutMissionsSetting, setUseTimeoutMissionsSetting] = useState(true);
+  const [settingsSuccessMessage, setSettingsSuccessMessage] = useState('');
   const [selectedScheduledEmail, setSelectedScheduledEmail] = useState<any>(null);
 
   useEffect(() => {
@@ -2198,6 +2199,7 @@ export default function Home() {
 
                   <form onSubmit={async (e) => {
                     e.preventDefault();
+                    setSettingsSuccessMessage('');
                     const form = e.currentTarget;
                     const deliveryTime = (form.elements.namedItem('deliveryTime') as HTMLInputElement).value;
                     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
@@ -2211,11 +2213,17 @@ export default function Home() {
                     if (updated) {
                       setCurrentUser(updated);
                       setAllUsers(await getAllUsers());
-                      triggerToast("Settings saved successfully.");
+                      triggerToast("설정이 성공적으로 저장되었습니다.", "저장 완료");
+                      setSettingsSuccessMessage("설정이 성공적으로 저장되었습니다.");
                       setSettingsNewPassword('');
                       setSettingsConfirmPassword('');
                     }
                   }} className="space-y-6 bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl">
+                    {settingsSuccessMessage && (
+                      <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/40 rounded-xl text-green-600 dark:text-green-400 text-xs font-semibold">
+                        ✓ {settingsSuccessMessage}
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-455 uppercase tracking-wider block">Name</label>
                       <input
