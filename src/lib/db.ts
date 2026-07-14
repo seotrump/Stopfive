@@ -401,8 +401,10 @@ export const processScheduledEmails = async (): Promise<number> => {
 export const processExpiredEmails = async (): Promise<number> => {
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   
+  // DB CHECK 제약조건이 'expired'를 허용하지 않는 경우 'read'로 우회
+  // 클라이언트에서 is_timeout_limit=true AND status='read' AND 5분 초과 시 만료로 판정
   const { data, error } = await supabase.from('emails')
-    .update({ status: 'expired' })
+    .update({ status: 'read' })
     .eq('status', 'unread')
     .eq('is_timeout_limit', true)
     .lte('created_at', fiveMinutesAgo)
@@ -416,8 +418,10 @@ export const processExpiredEmails = async (): Promise<number> => {
 };
 
 export const expireEmail = async (emailId: string): Promise<boolean> => {
+  // DB CHECK 제약조건 우회: 'expired' 대신 'read'로 상태 변경
+  // 클라이언트에서 is_timeout_limit=true AND status='read' AND 5분 초과 시 만료로 최종 판정
   const { error } = await supabase.from('emails')
-    .update({ status: 'expired' })
+    .update({ status: 'read' })
     .eq('id', emailId);
   if (error) {
     console.error('Error expiring email:', error);

@@ -1,0 +1,12 @@
+{
+  "AllowMultiple": "false",
+  "Description": "\"Fix duplicate button closing tag\"",
+  "EndLine": "1333",
+  "Instruction": "\"Remove duplicate </button> tag\"",
+  "ReplacementContent": "\"                        <span>예약 발송 등록</span>\\n                      </button>\\n                    </div>\\n                  </form>\\n                </div>\"",
+  "StartLine": "1328",
+  "TargetContent": "\"                        <span>예약 발송 등록</span>\\n                      </button>\\n                      </button>\\n                    </div>\\n                  </form>\\n                </div>\"",
+  "TargetFile": "\"f:\\\\projects\\\\SS-stopfive\\\\src\\\\app\\\\page.tsx\"",
+  "toolAction": "\"Fix syntax error\"",
+  "toolSummary": "\"Fix duplicate tag\""
+}

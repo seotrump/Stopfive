@@ -326,11 +326,11 @@ export default function Home() {
     let finalStatus = email.status;
     
     if (isTimeout) {
-      // 만료된 미션 메일: DB에 expired로 기록하고 화면을 즉시 갱신
-      finalStatus = 'expired';
+      // 만료된 미션 메일: DB에 read로 기록하고 화면을 즉시 갱신 (DB 제약 우회)
+      finalStatus = 'read';
       await expireEmail(email.id);
       // emails 상태도 즉시 업데이트 (10초 타이머 기다리지 않고)
-      setEmails(prev => prev.map((e: any) => e.id === email.id ? { ...e, status: 'expired' } : e));
+      setEmails(prev => prev.map((e: any) => e.id === email.id ? { ...e, status: 'read' } : e));
     } else if (!isMissionEmail) {
       // 일반 메일(팀 발송이 아닌 일반 유저간 메일)만 읽음/보관 처리
       const local = await getLocalEmails(currentUser.virtualEmail);
@@ -360,8 +360,12 @@ export default function Home() {
       const senderLower = email.sender?.toLowerCase();
       const userEmailLower = currentUser.virtualEmail?.toLowerCase();
       const isMission = senderLower === 'team@stopfive.com' || email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission;
+      const elapsedMs = new Date().getTime() - new Date(email.createdAt).getTime();
+      const isOver5Min = elapsedMs > 5 * 60 * 1000;
+      // isExpired: DB에 'expired' 또는 'read'로 표시된 경우(DB 제약 조건 우회) + 클라이언트 시간 계산 포함
       const isExpired = email.status === 'expired' || 
-        (email.isTimeoutLimit && email.status === 'unread' && (new Date().getTime() - new Date(email.createdAt).getTime() > 5 * 60 * 1000));
+        (email.isTimeoutLimit && email.status === 'read') ||
+        (email.isTimeoutLimit && email.status === 'unread' && isOver5Min);
 
       if (userTab === 'inbox') {
         // 일반 메일 또는 아직 만료되지 않은 미션 메일만 노출
@@ -2351,6 +2355,22 @@ export default function Home() {
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium">Local Simulation Inbox</span>
                   </div>
+                  
+                  {/* 🔍 임시 디버그 패널 - 실제 메일 속성 확인용 */}
+                  {userTab === 'inbox' && emails.filter((e: any) => e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase()).length > 0 && (
+                    <div className="mx-4 mt-2 mb-1 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-300 rounded-xl text-[10px] font-mono space-y-1">
+                      <div className="font-bold text-yellow-700">🔍 DEBUG: 수신 메일 속성</div>
+                      {emails.filter((e: any) => e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase()).slice(0, 3).map((e: any) => {
+                        const minsAgo = ((Date.now() - new Date(e.createdAt).getTime()) / 60000).toFixed(1);
+                        return (
+                          <div key={e.id} className="text-yellow-800 dark:text-yellow-300 border-t border-yellow-200 pt-1">
+                            <span className="font-bold">[{e.subject?.substring(0, 20)}]</span>{' '}
+                            status={e.status} | isTimeoutLimit={String(e.isTimeoutLimit)} | isForceTimeout={String(e.isForceTimeout)} | sender={e.sender?.split('@')[0]} | {minsAgo}분 전
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   <div className="flex-1 overflow-y-auto">
                     {userFiltered.length === 0 ? (

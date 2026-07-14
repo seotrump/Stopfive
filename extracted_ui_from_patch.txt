@@ -1,0 +1,149 @@
+﻿diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 5228254..69718f4 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -1,4 +1,4 @@
+-'use client';
++癤?use client';
+ 
+ import React, { useState, useEffect } from 'react';
+ import { 
+@@ -16,14 +16,18 @@ import {
+   getNextCourseMission,
+   simulateNextDayForUser,
+   resetExperienceCourse,
+-  getAllUsers
++  getAllUsers,
++  getScheduledEmails,
++  createScheduledEmail,
++  cancelScheduledEmail,
++  markEmailAsArchived
+ } from '../lib/db';
+ 
+ export default function Home() {
+-  // ?ъ슜??諛??대퉬寃뚯씠???곹깭
++  // ?????獄????у칰??뵠???怨밴묶
+   const [currentUser, setCurrentUser] = useState<any>(null);
+   const [userTab, setUserTab] = useState<'inbox' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose'>('inbox');
+-  const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose'>('users');
++  const [adminTab, setAdminTab] = useState<'inbox' | 'sent' | 'archive' | 'users' | 'statistics' | 'compose' | 'settings' | 'scheduled'>('users');
+   const [emails, setEmails] = useState<any[]>([]);
+   const [selectedEmail, setSelectedEmail] = useState<any>(null);
+   const [replyText, setReplyText] = useState('');
+@@ -31,31 +35,92 @@ export default function Home() {
+   const [isCourseGuideOpen, setIsCourseGuideOpen] = useState(false);
+   const [allUsers, setAllUsers] = useState<any[]>([]);
+   const [stats, setStats] = useState<any>(null);
++  const [readAdminReplies, setReadAdminReplies] = useState<string[]>([]);
+ 
+-  // Compose ?좉퇋 硫붿씪 ?곹깭
++  // Compose ?醫됲뇣 筌롫뗄???怨밴묶
+   const [composeTo, setComposeTo] = useState('');
+   const [composeSubject, setComposeSubject] = useState('');
+   const [composeBody, setComposeBody] = useState('');
+ 
+-  // ?ㅼ젙 ???곹깭
++  // ??됰튋 獄쏆뮇?????怨밴묶
++  const [scheduledEmails, setScheduledEmails] = useState<any[]>([]);
++  const [scheduledTo, setScheduledTo] = useState('');
++  const [scheduledSubject, setScheduledSubject] = useState('');
++  const [scheduledBody, setScheduledBody] = useState('');
++  const [scheduledDate, setScheduledDate] = useState('');
++  const [scheduledTime, setScheduledTime] = useState('09:00');
++
++  // ??쇱젟 ???怨밴묶
+   const [settingsNewPassword, setSettingsNewPassword] = useState('');
+   const [settingsConfirmPassword, setSettingsConfirmPassword] = useState('');
+ 
+-  // 濡쒓렇???뚯썝媛?????곹깭
++  // 嚥≪뮄??????뜚揶쎛?????怨밴묶
+   const [authMode, setAuthMode] = useState<'home' | 'login' | 'register'>('home');
+   const [authEmail, setAuthEmail] = useState('');
+   const [authPassword, setAuthPassword] = useState('');
+   const [authName, setAuthName] = useState('');
+   const [authDeliveryTime, setAuthDeliveryTime] = useState('09:00');
+ 
+-  // ?좎뒪??硫붿떆吏 ?곹깭
++  // ?醫롫뮞??筌롫뗄?놅쭪? ?怨밴묶
+   const [toast, setToast] = useState<{ show: boolean; message: string; title?: string }>({
+     show: false,
+     message: '',
+     title: ''
+   });
+ 
+-  // 珥덇린 濡쒕뵫
++  // ?λ뜃由?嚥≪뮆逾??????怨밴묶 癰귣벀??+  useEffect(() => {
++    if (typeof window !== 'undefined') {
++      const savedUserTab = localStorage.getItem('stopfive_userTab') as any;
++      const savedAdminTab = localStorage.getItem('stopfive_adminTab') as any;
++      const savedReadAdminReplies = localStorage.getItem('stopfive_readAdminReplies');
++      
++      if (savedUserTab) setUserTab(savedUserTab);
++      if (savedAdminTab) setAdminTab(savedAdminTab);
++      if (savedReadAdminReplies) {
++        try { setReadAdminReplies(JSON.parse(savedReadAdminReplies)); } catch(e) {}
++      }
++    }
++  }, []);
++
++  // ??癰궰野?????됰뮞?醫듼봺 獄?嚥≪뮇類??쎈꽅?귐? ??녿┛??(admin)
++  useEffect(() => {
++    if (typeof window !== 'undefined' && currentUser?.role === 'admin') {
++      localStorage.setItem('stopfive_adminTab', adminTab);
++      if (window.history.state?.tab !== adminTab) {
++        window.history.pushState({ tab: adminTab }, '', `#${adminTab}`);
++      }
++    }
++  }, [adminTab, currentUser]);
++
++  // ??癰궰野?????됰뮞?醫듼봺 獄?嚥≪뮇類??쎈꽅?귐? ??녿┛??(user)
++  useEffect(() => {
++    if (typeof window !== 'undefined' && currentUser?.role === 'user') {
++      localStorage.setItem('stopfive_userTab', userTab);
++      if (window.history.state?.tab !== userTab) {
++        window.history.pushState({ tab: userTab }, '', `#${userTab}`);
++      }
++    }
++  }, [userTab, currentUser]);
++
++  // ??살쨮揶쎛疫?popstate) ??源??筌ｌ꼶??+  useEffect(() => {
++    if (typeof window === 'undefined') return;
++    const handlePopState = (e: PopStateEvent) => {
++      if (e.state && e.state.tab) {
++        if (currentUser?.role === 'admin') setAdminTab(e.state.tab);
++        else if (currentUser) setUserTab(e.state.tab);
++      } else if (window.location.hash) {
++        const hashTab = window.location.hash.replace('#', '') as any;
++        if (currentUser?.role === 'admin') setAdminTab(hashTab);
++        else if (currentUser) setUserTab(hashTab);
++      }
++    };
++    window.addEventListener('popstate', handlePopState);
++    return () => window.removeEventListener('popstate', handlePopState);
++  }, [currentUser]);
++
++  // ?λ뜃由?嚥≪뮆逾?   useEffect(() => {
+     const fetchData = async () => {
+       const user = await getCurrentUser();
+@@ -76,138 +141,179 @@ export default function Home() {
+     }
+   }, [currentUser]);
+ 
+-  // ?좎뒪???꾩슦誘?-  const triggerToast = (message: string, title?: string) => {
+-    setToast({ show: true, message, title });
+-    setTimeout(() => {
+-      setToast(prev => ({ ...prev, show: false }));
+-    }, 4000);
++  useEffect(() => {
++    if (adminTab === 'scheduled-compose' || adminTab === 'scheduled-manage') {
++      getScheduledEmails().then(setScheduledEmails);
++    }
++  }, [adminTab]);
++
++  // ?醫롫뮞???袁⑹뒭沃?  const triggerToast = (message: string, title?: string) => {
++    // ????癒?벥 ?遺욧퍕??곗쨮 筌뤴뫀諭????뵝筌?Toast) 疫꿸퀡????볤탢
+   };
+ 
+-  // 濡쒓렇???몃뱾??-  const handleLogin = async (e: React.FormEvent) => {
++  // 嚥≪뮄????紐껊굶??  const handleLogin = async (e: React.FormEvent) => {
+     e.preventDefault();

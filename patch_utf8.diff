@@ -1,0 +1,2398 @@
+﻿diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 5228254..69718f4 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -1,4 +1,4 @@
+-'use client';
++癤?use client';
+ 
+ import React, { useState, useEffect } from 'react';
+ import { 
+@@ -16,14 +16,18 @@ import {
+   getNextCourseMission,
+   simulateNextDayForUser,
+   resetExperienceCourse,
+-  getAllUsers
++  getAllUsers,
++  getScheduledEmails,
++  createScheduledEmail,
++  cancelScheduledEmail,
++  markEmailAsArchived
+ } from '../lib/db';
+ 
+ export default function Home() {
+-  // ?ъ슜??諛??대퉬寃뚯씠???곹깭
++  // ?????獄????у칰??뵠???怨밴묶
+   const [currentUser, setCurrentUser] = useState<any>(null);
+   const [userTab, setUserTab] = useState<'inbox' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose'>('inbox');
+-  const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose'>('users');
++  const [adminTab, setAdminTab] = useState<'inbox' | 'sent' | 'archive' | 'users' | 'statistics' | 'compose' | 'settings' | 'scheduled'>('users');
+   const [emails, setEmails] = useState<any[]>([]);
+   const [selectedEmail, setSelectedEmail] = useState<any>(null);
+   const [replyText, setReplyText] = useState('');
+@@ -31,31 +35,92 @@ export default function Home() {
+   const [isCourseGuideOpen, setIsCourseGuideOpen] = useState(false);
+   const [allUsers, setAllUsers] = useState<any[]>([]);
+   const [stats, setStats] = useState<any>(null);
++  const [readAdminReplies, setReadAdminReplies] = useState<string[]>([]);
+ 
+-  // Compose ?좉퇋 硫붿씪 ?곹깭
++  // Compose ?醫됲뇣 筌롫뗄???怨밴묶
+   const [composeTo, setComposeTo] = useState('');
+   const [composeSubject, setComposeSubject] = useState('');
+   const [composeBody, setComposeBody] = useState('');
+ 
+-  // ?ㅼ젙 ???곹깭
++  // ??됰튋 獄쏆뮇?????怨밴묶
++  const [scheduledEmails, setScheduledEmails] = useState<any[]>([]);
++  const [scheduledTo, setScheduledTo] = useState('');
++  const [scheduledSubject, setScheduledSubject] = useState('');
++  const [scheduledBody, setScheduledBody] = useState('');
++  const [scheduledDate, setScheduledDate] = useState('');
++  const [scheduledTime, setScheduledTime] = useState('09:00');
++
++  // ??쇱젟 ???怨밴묶
+   const [settingsNewPassword, setSettingsNewPassword] = useState('');
+   const [settingsConfirmPassword, setSettingsConfirmPassword] = useState('');
+ 
+-  // 濡쒓렇???뚯썝媛?????곹깭
++  // 嚥≪뮄??????뜚揶쎛?????怨밴묶
+   const [authMode, setAuthMode] = useState<'home' | 'login' | 'register'>('home');
+   const [authEmail, setAuthEmail] = useState('');
+   const [authPassword, setAuthPassword] = useState('');
+   const [authName, setAuthName] = useState('');
+   const [authDeliveryTime, setAuthDeliveryTime] = useState('09:00');
+ 
+-  // ?좎뒪??硫붿떆吏 ?곹깭
++  // ?醫롫뮞??筌롫뗄?놅쭪? ?怨밴묶
+   const [toast, setToast] = useState<{ show: boolean; message: string; title?: string }>({
+     show: false,
+     message: '',
+     title: ''
+   });
+ 
+-  // 珥덇린 濡쒕뵫
++  // ?λ뜃由?嚥≪뮆逾??????怨밴묶 癰귣벀??+  useEffect(() => {
++    if (typeof window !== 'undefined') {
++      const savedUserTab = localStorage.getItem('stopfive_userTab') as any;
++      const savedAdminTab = localStorage.getItem('stopfive_adminTab') as any;
++      const savedReadAdminReplies = localStorage.getItem('stopfive_readAdminReplies');
++      
++      if (savedUserTab) setUserTab(savedUserTab);
++      if (savedAdminTab) setAdminTab(savedAdminTab);
++      if (savedReadAdminReplies) {
++        try { setReadAdminReplies(JSON.parse(savedReadAdminReplies)); } catch(e) {}
++      }
++    }
++  }, []);
++
++  // ??癰궰野?????됰뮞?醫듼봺 獄?嚥≪뮇類??쎈꽅?귐? ??녿┛??(admin)
++  useEffect(() => {
++    if (typeof window !== 'undefined' && currentUser?.role === 'admin') {
++      localStorage.setItem('stopfive_adminTab', adminTab);
++      if (window.history.state?.tab !== adminTab) {
++        window.history.pushState({ tab: adminTab }, '', `#${adminTab}`);
++      }
++    }
++  }, [adminTab, currentUser]);
++
++  // ??癰궰野?????됰뮞?醫듼봺 獄?嚥≪뮇類??쎈꽅?귐? ??녿┛??(user)
++  useEffect(() => {
++    if (typeof window !== 'undefined' && currentUser?.role === 'user') {
++      localStorage.setItem('stopfive_userTab', userTab);
++      if (window.history.state?.tab !== userTab) {
++        window.history.pushState({ tab: userTab }, '', `#${userTab}`);
++      }
++    }
++  }, [userTab, currentUser]);
++
++  // ??살쨮揶쎛疫?popstate) ??源??筌ｌ꼶??+  useEffect(() => {
++    if (typeof window === 'undefined') return;
++    const handlePopState = (e: PopStateEvent) => {
++      if (e.state && e.state.tab) {
++        if (currentUser?.role === 'admin') setAdminTab(e.state.tab);
++        else if (currentUser) setUserTab(e.state.tab);
++      } else if (window.location.hash) {
++        const hashTab = window.location.hash.replace('#', '') as any;
++        if (currentUser?.role === 'admin') setAdminTab(hashTab);
++        else if (currentUser) setUserTab(hashTab);
++      }
++    };
++    window.addEventListener('popstate', handlePopState);
++    return () => window.removeEventListener('popstate', handlePopState);
++  }, [currentUser]);
++
++  // ?λ뜃由?嚥≪뮆逾?   useEffect(() => {
+     const fetchData = async () => {
+       const user = await getCurrentUser();
+@@ -76,138 +141,179 @@ export default function Home() {
+     }
+   }, [currentUser]);
+ 
+-  // ?좎뒪???꾩슦誘?-  const triggerToast = (message: string, title?: string) => {
+-    setToast({ show: true, message, title });
+-    setTimeout(() => {
+-      setToast(prev => ({ ...prev, show: false }));
+-    }, 4000);
++  useEffect(() => {
++    if (adminTab === 'scheduled-compose' || adminTab === 'scheduled-manage') {
++      getScheduledEmails().then(setScheduledEmails);
++    }
++  }, [adminTab]);
++
++  // ?醫롫뮞???袁⑹뒭沃?  const triggerToast = (message: string, title?: string) => {
++    // ????癒?벥 ?遺욧퍕??곗쨮 筌뤴뫀諭????뵝筌?Toast) 疫꿸퀡????볤탢
+   };
+ 
+-  // 濡쒓렇???몃뱾??-  const handleLogin = async (e: React.FormEvent) => {
++  // 嚥≪뮄????紐껊굶??  const handleLogin = async (e: React.FormEvent) => {
+     e.preventDefault();
+     const user = await loginUser(authEmail, authPassword);
+     if (user) {
+       setCurrentUser(user);
+       setEmails(await getLocalEmails(user.virtualEmail));
+-      triggerToast(`${user.name}?? 媛??硫붿씪?⑥뿉 ?ㅼ떊 寃껋쓣 ?섏쁺?⑸땲??`, "濡쒓렇???깃났");
++      setAllUsers(await getAllUsers());
+       setAuthPassword('');
++      if (user.role === 'admin') {
++        setAdminTab('inbox');
++      } else {
++        setUserTab('inbox');
++      }
+     } else {
+-      triggerToast("?대찓???먮뒗 鍮꾨?踰덊샇瑜??ㅼ떆 ?뺤씤??二쇱꽭??", "濡쒓렇???ㅽ뙣");
++      triggerToast("??李???癒?뮉 ??쑬?甕곕뜇?뉒몴???쇰뻻 ?類ㅼ뵥??雅뚯눘苑??", "嚥≪뮄?????쎈솭");
+     }
+   };
+ 
+-  // ?뚯썝媛???몃뱾??-  const handleRegister = async (e: React.FormEvent) => {
++  // ???뜚揶쎛???紐껊굶??  const handleRegister = async (e: React.FormEvent) => {
+     e.preventDefault();
+     const username = authEmail.split('@')[0] || 'user';
+-    const user = await registerUser(authName, username, authEmail, authDeliveryTime, authPassword);
++    const user = await registerUser(authName, username, authEmail, authPassword);
+     if (user) {
+       setCurrentUser(user);
+       setEmails(await getLocalEmails(user.virtualEmail));
+       setAllUsers(await getAllUsers());
+-      triggerToast(`${user.name}?섏쓽 怨꾩젙???앹꽦?섏뿀?쇰ŉ @stopfive.com 媛???대찓?쇱씠 遺?щ릺?덉뒿?덈떎.`, "媛???꾨즺");
+       setAuthPassword('');
+     } else {
+-      triggerToast("?대? 媛?낅맂 ?쇰컲 ?대찓?쇱씠嫄곕굹 媛?낆뿉 ?ㅽ뙣?덉뒿?덈떎.", "?뚯썝媛???ㅻ쪟");
++      triggerToast("??? 揶쎛??낅쭆 ??곗뺘 ??李??깆뵠椰꾧퀡援?揶쎛??녿퓠 ??쎈솭??됰뮸??덈뼄.", "???뜚揶쎛????살첒");
+     }
+   };
+ 
+-  // 濡쒓렇?꾩썐 ?몃뱾??-  const handleLogout = async () => {
++  // 嚥≪뮄??袁⑹뜍 ?紐껊굶??  const handleLogout = async () => {
+     await logoutUser();
+     setCurrentUser(null);
+     setSelectedEmail(null);
+     setUserTab('inbox');
+-    triggerToast("?깃났?곸쑝濡?濡쒓렇?꾩썐?섏뿀?듬땲??");
++    setAllUsers([]);
+   };
+ 
+-  // ?듭옣 蹂대궡湲??몃뱾??-  const handleSendReply = async (e: React.FormEvent) => {
++  // ???삢 癰귣?沅→묾??紐껊굶??  const handleSendReply = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!replyText.trim() || !selectedEmail || !currentUser) return;
+ 
+     const success = await sendReply(selectedEmail.id, replyText);
+     if (success) {
+-      // 由ъ뒪??媛깆떊 諛??곹깭 ?숆린??-      setEmails(await getLocalEmails(currentUser.virtualEmail));
++      // ?귐딅뮞??揶쏄퉮??獄??怨밴묶 ??녿┛??      setEmails(await getLocalEmails(currentUser.virtualEmail));
+       const updatedUser = await getCurrentUser();
+       setCurrentUser(updatedUser);
+       
+-      triggerToast("?듭옣???깃났?곸쑝濡??꾩넚?섏뼱 ?쎌냽??蹂닿??⑥쑝濡???꺼議뚯뒿?덈떎.", "?듭옣 ?꾩넚 ?꾨즺");
++      triggerToast("???삢???源껊궗?怨몄몵嚥??袁⑸꽊??뤿선 ??뚮꺗??癰귣떯???μ몵嚥???爰쇠???뮸??덈뼄.", "???삢 ?袁⑸꽊 ?袁⑥┷");
+       setReplyText('');
+       setSelectedEmail(null);
+     }
+   };
+ 
+-  // 愿由ъ옄 ?꾩슜: ?뱀젙 ?좎??먭쾶 ?ㅼ쓬 ???묓릟 硫붿씪 ?섎룞 媛뺤젣 ?꾩넚 ?쒕??덉씠??-  const handleAdminTriggerNextDay = async (userVirtualEmail: string) => {
++  // ?온?귐딆쁽 ?袁⑹뒠: ?諭???醫??癒?쓺 ??쇱벉 ???臾볥쬉 筌롫뗄????롫짗 揶쏅벡???袁⑸꽊 ?????됱뵠??  const handleAdminTriggerNextDay = async (userVirtualEmail: string) => {
+     const updated = await simulateNextDayForUser(userVirtualEmail);
+     if (updated) {
+-      // DB ?곹깭 ?덈줈怨좎묠
++      // DB ?怨밴묶 ??덉쨮?⑥쥙臾?       setAllUsers(await getAllUsers());
+       if (currentUser) {
+         setEmails(await getLocalEmails(currentUser.virtualEmail));
+       }
+-      triggerToast(`${updated.name}?섏뿉寃??ㅼ쓬 5??泥댄뿕 誘몄뀡 硫붿씪??媛뺤젣 諛쒖넚?섏뿀?듬땲??`, "?뚮┝ 硫붿씪 媛뺤젣 ?몃━嫄??깃났");
++      triggerToast(`${updated.name}??뤿퓠野???쇱벉 5??筌ｋ똾肉?沃섎챷??筌롫뗄???揶쏅벡??獄쏆뮇???뤿???щ빍??`, "???뵝 筌롫뗄??揶쏅벡???紐꺿봺椰??源껊궗");
+     } else {
+-      triggerToast("肄붿뒪媛 ?꾨즺?섏뿀嫄곕굹 ???댁긽 諛쒖넚??誘몄뀡???놁뒿?덈떎.", "媛뺤젣 諛쒖넚 ?ㅽ뙣");
++      triggerToast("?꾨뗄?ゅ첎? ?袁⑥┷??뤿?椰꾧퀡援?????곴맒 獄쏆뮇???沃섎챷?????곷뮸??덈뼄.", "揶쏅벡??獄쏆뮇????쎈솭");
+     }
+   };
+ 
+-  // ?좉퇋 硫붿씪 諛쒖넚 ?몃뱾??-  const handleSendCompose = async (e: React.FormEvent) => {
++  // ?醫됲뇣 筌롫뗄??獄쏆뮇???紐껊굶??  const handleSendCompose = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!currentUser) return;
+-    const success = await sendComposeMail(currentUser.virtualEmail, composeSubject, composeBody);
++    
++    let success = false;
++    if (currentUser.role === 'admin') {
++      success = await sendAdminMailToUser(composeTo, composeSubject, composeBody);
++    } else {
++      success = await sendComposeMail(currentUser.virtualEmail, composeSubject, composeBody);
++    }
++    
+     if (success) {
+       setEmails(await getLocalEmails(currentUser.virtualEmail));
+       setIsComposeOpen(false);
+       setComposeTo('');
+       setComposeSubject('');
+       setComposeBody('');
+-      triggerToast("?묒꽦?섏떊 硫붿씪???깃났?곸쑝濡??꾩넚?섏뿀?듬땲??", "硫붿씪 諛쒖넚 ?꾨즺");
++      triggerToast("?臾믨쉐??뤿뻿 筌롫뗄????源껊궗?怨몄몵嚥??袁⑸꽊??뤿???щ빍??", "筌롫뗄??獄쏆뮇???袁⑥┷");
+     } else {
+-      triggerToast("硫붿씪 ?꾩넚???ㅽ뙣?덉뒿?덈떎. ?몄뀡???뺤씤??二쇱꽭??");
++      triggerToast("筌롫뗄???袁⑸꽊????쎈솭??됰뮸??덈뼄. ?紐꾨???類ㅼ뵥??雅뚯눘苑??");
+     }
+   };
+ 
+-  // 硫붿씪 ?쎄린 ?좏깮 ?몃뱾??-  const handleSelectEmail = async (email: any) => {
++  const handleScheduledEmailCreate = async (e: React.FormEvent) => {
++    e.preventDefault();
++    const scheduledAtStr = `${scheduledDate}T${scheduledTime}:00`;
++    const scheduledAt = new Date(scheduledAtStr);
++    if (isNaN(scheduledAt.getTime())) {
++      triggerToast("?醫륁뒞????됰튋 ??깅뻻???醫뤾문??뤾쉭??", "??됰튋 ??쎈솭");
++      return;
++    }
++    const receiverVirtualEmail = scheduledTo;
++    const receiverUser = allUsers.find(u => u.virtualEmail === receiverVirtualEmail);
++    if (!receiverUser) return;
++
++    const success = await createScheduledEmail(receiverVirtualEmail, receiverUser.name, scheduledSubject, scheduledBody, scheduledAt.toISOString());
++    if (success) {
++      setScheduledEmails(await getScheduledEmails());
++      setScheduledTo('');
++      setScheduledSubject('');
++      setScheduledBody('');
++      setScheduledDate('');
++      setScheduledTime('09:00');
++      triggerToast("??됰튋 筌롫뗄????源낆쨯??뤿???щ빍??", "??됰튋 ?源껊궗");
++    } else {
++      triggerToast("??됰튋 筌롫뗄???源낆쨯????쎈솭??됰뮸??덈뼄.");
++    }
++  };
++
++  const handleScheduledEmailCancel = async (id: string) => {
++    const success = await cancelScheduledEmail(id);
++    if (success) {
++      setScheduledEmails(await getScheduledEmails());
++      triggerToast("??됰튋 筌롫뗄????띯뫁???뤿???щ빍??", "?띯뫁???袁⑥┷");
++    }
++  };
++
++  // 筌롫뗄????꾨┛ ?醫뤾문 ?紐껊굶??  const handleSelectEmail = async (email: any) => {
+     if (!currentUser) return;
+     const local = await getLocalEmails(currentUser.virtualEmail);
+     const found = local.find((e: any) => e.id === email.id);
+     if (found && found.status === 'unread' && found.receiver === currentUser.virtualEmail) {
+-      found.status = 'read';
+-      // TODO: db.ts ???대찓???곹깭 ?낅뜲?댄듃 濡쒖쭅 異붽? ???몄텧
+-      setEmails(local);
++      found.status = 'archived';
++      markEmailAsArchived(found.id).then(() => {
++        setEmails(prev => prev.map(e => e.id === found.id ? { ...e, status: 'archived' } : e));
++      });
+     }
+-    setSelectedEmail(email);
++    setSelectedEmail(found || email);
+   };
+ 
+-  // 硫붿씪 ???꾪꽣留?-  const getFilteredEmails = () => {
++  // 筌롫뗄?????袁り숲筌?  const getFilteredEmails = () => {
+     if (!currentUser) return [];
+     
+-    // 愿由ъ옄 怨꾩젙 ?щ?
++    // ?온?귐딆쁽 ?④쑴?????
+     const isAdmin = currentUser.role === 'admin';
+     
+     return emails.filter((email: any) => {
+       if (userTab === 'inbox') {
+-        // ?쎌? ?딆븯嫄곕굹 ?쎌뿀?쇰굹 ?꾩쭅 ?듭옣?섏? ?딆? 誘몄뀡 硫붿씪??-        return email.receiver === currentUser.virtualEmail && email.status !== 'archived';
++        // ??? ??녿릭椰꾧퀡援???뚮???곌돌 ?袁⑹춦 ???삢??? ??? 沃섎챷??筌롫뗄???        return email.receiver === currentUser.virtualEmail && email.status !== 'archived';
+       }
+       if (userTab === 'archive') {
+-        // ?대? ?듭옣?덇굅???꾩뭅?대툕??硫붿씪??-        return email.receiver === currentUser.virtualEmail && email.status === 'archived';
++        // ??? ???삢??뉕탢???袁⑸춦?????筌롫뗄???        return email.receiver === currentUser.virtualEmail && email.status === 'archived';
+       }
+       if (userTab === 'sent') {
+-        // 蹂몄씤??諛쒖떊??硫붿씪??-        return email.sender === currentUser.virtualEmail;
++        // 癰귣챷???獄쏆뮇???筌롫뗄????筌롫뗄?놅쭪?)??욧탢?? ??뤿뻿??筌롫뗄???癰귣챷??????삢??癰귣?沅?野껋럩??+        return email.sender === currentUser.virtualEmail || (email.receiver === currentUser.virtualEmail && email.replyContent);
+       }
+       return false;
+-    }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
++    }).sort((a: any, b: any) => {
++      const timeA = (userTab === 'sent' && a.receiver === currentUser.virtualEmail && a.replyContent) ? new Date(a.answeredAt).getTime() : new Date(a.createdAt).getTime();
++      const timeB = (userTab === 'sent' && b.receiver === currentUser.virtualEmail && b.replyContent) ? new Date(b.answeredAt).getTime() : new Date(b.createdAt).getTime();
++      return timeB - timeA;
++    });
+   };
+ 
+   const userFiltered = getFilteredEmails();
+@@ -215,24 +321,11 @@ export default function Home() {
+   return (
+     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+       
+-      {/* ?좎뒪???뚮┝ 而댄룷?뚰듃 */}
+-      {toast.show && (
+-        <div className="fixed top-6 right-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 max-w-sm z-50 flex items-start space-x-3 animate-fade-in-down">
+-          <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-primary shrink-0">
+-            ?됵툘
+-          </div>
+-          <div>
+-            {toast.title && <h4 className="text-xs font-bold text-slate-900 dark:text-white">{toast.title}</h4>}
+-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{toast.message}</p>
+-          </div>
+-        </div>
+-      )}
+-
+-      {/* 1. 鍮꾨줈洹몄씤 ?좎???珥덊봽由щ????곗뺨 ?쒕뵫 ?섏씠吏 */}
++      {/* 1. ??쑬以덃뉩紐꾩뵥 ?醫????λ뜇遊썹뵳?????怨쀫벰 ??뺣뎃 ??륁뵠筌왖 */}
+       {!currentUser ? (
+         <div className="flex-1 flex flex-col">
+ 
+-          {/* 濡쒓렇???붾㈃ */}
++          {/* 嚥≪뮄????遺얇늺 */}
+           {authMode === 'login' && (
+             <div className="min-h-screen flex flex-col items-center justify-center bg-[#f6f8fc] dark:bg-slate-950 px-4">
+               <div className="w-full max-w-sm space-y-8">
+@@ -244,29 +337,29 @@ export default function Home() {
+                     <span className="w-8 h-8 bg-[#202124] rounded-lg flex items-center justify-center text-white text-sm font-black">5</span>
+                     <span className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
+                   </button>
+-                  <h1 className="text-xl font-bold text-[#202124] dark:text-white">濡쒓렇??/h1>
+-                  <p className="text-xs text-slate-500">怨꾩젙??濡쒓렇?명븯??硫붿씪?⑥쑝濡??대룞?⑸땲??/p>
++                  <h1 className="text-xl font-bold text-[#202124] dark:text-white">嚥≪뮄???/h1>
++                  <p className="text-xs text-slate-500">?④쑴???嚥≪뮄??紐낅릭??筌롫뗄???μ몵嚥???猷??몃빍??/p>
+                 </div>
+                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm space-y-5">
+                   <form onSubmit={handleLogin} className="space-y-4">
+                     <div className="space-y-1.5">
+-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">?대찓??/label>
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??李??/label>
+                       <input
+                         type="email"
+                         value={authEmail}
+                         onChange={(e) => setAuthEmail(e.target.value)}
+-                        placeholder="媛?낇븳 ?대찓??二쇱냼"
++                        placeholder="揶쎛??뉖립 ??李??雅뚯눘??
+                         className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                         required
+                       />
+                     </div>
+                     <div className="space-y-1.5">
+-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">鍮꾨?踰덊샇</label>
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??쑬?甕곕뜇??/label>
+                       <input
+                         type="password"
+                         value={authPassword}
+                         onChange={(e) => setAuthPassword(e.target.value)}
+-                        placeholder="鍮꾨?踰덊샇"
++                        placeholder="??쑬?甕곕뜇??
+                         className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                         required
+                       />
+@@ -275,26 +368,23 @@ export default function Home() {
+                       type="submit"
+                       className="w-full py-3 bg-[#202124] hover:bg-slate-800 text-white font-bold rounded-xl text-sm transition-all"
+                     >
+-                      濡쒓렇??-                    </button>
++                      嚥≪뮄???                    </button>
+                   </form>
+                   <div className="text-center text-xs text-slate-400">
+-                    怨꾩젙???놁쑝?좉???{' '}
++                    ?④쑴?????곸몵?醫???{' '}
+                     <button onClick={() => setAuthMode('register')} className="font-bold text-[#202124] dark:text-white hover:underline">
+-                      ?뚯썝媛??-                    </button>
++                      ???뜚揶쎛??                    </button>
+                   </div>
+                 </div>
+                 <div className="text-center">
+                   <button onClick={() => setAuthMode('home')} className="text-xs text-slate-400 hover:text-slate-600 transition-all">
+-                    ???덉쑝濡??뚯븘媛湲?-                  </button>
++                    ????됱몵嚥????툡揶쎛疫?                  </button>
+                 </div>
+               </div>
+             </div>
+           )}
+ 
+-          {/* ?뚯썝媛???붾㈃ */}
++          {/* ???뜚揶쎛???遺얇늺 */}
+           {authMode === 'register' && (
+             <div className="min-h-screen flex flex-col items-center justify-center bg-[#f6f8fc] dark:bg-slate-950 px-4 py-12">
+               <div className="w-full max-w-sm space-y-8">
+@@ -306,24 +396,24 @@ export default function Home() {
+                     <span className="w-8 h-8 bg-[#202124] rounded-lg flex items-center justify-center text-white text-sm font-black">5</span>
+                     <span className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
+                   </button>
+-                  <h1 className="text-xl font-bold text-[#202124] dark:text-white">?뚯썝媛??/h1>
+-                  <p className="text-xs text-slate-500">3??5??泥댄뿕 肄붿뒪??媛?낇빀?덈떎</p>
++                  <h1 className="text-xl font-bold text-[#202124] dark:text-white">???뜚揶쎛??/h1>
++                  <p className="text-xs text-slate-500">3??5??筌ｋ똾肉??꾨뗄???揶쎛??뉖???덈뼄</p>
+                 </div>
+                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm space-y-5">
+                   <form onSubmit={handleRegister} className="space-y-4">
+                     <div className="space-y-1.5">
+-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">?대쫫</label>
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??已?/label>
+                       <input
+                         type="text"
+                         value={authName}
+                         onChange={(e) => setAuthName(e.target.value)}
+-                        placeholder="?띻만??
++                        placeholder="??삳쭔??
+                         className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                         required
+                       />
+                     </div>
+                     <div className="space-y-1.5">
+-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">?대찓??/label>
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??李??/label>
+                       <input
+                         type="email"
+                         value={authEmail}
+@@ -334,56 +424,44 @@ export default function Home() {
+                       />
+                     </div>
+                     <div className="space-y-1.5">
+-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">鍮꾨?踰덊샇</label>
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??쑬?甕곕뜇??/label>
+                       <input
+                         type="password"
+                         value={authPassword}
+                         onChange={(e) => setAuthPassword(e.target.value)}
+-                        placeholder="4?먮━ ?댁긽"
+-                        className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+-                        required
+-                      />
+-                    </div>
+-                    <div className="space-y-1.5">
+-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">誘몄뀡 硫붿씪 ?섏떊 ?щ쭩 ?쒓컙</label>
+-                      <input
+-                        type="time"
+-                        value={authDeliveryTime}
+-                        onChange={(e) => setAuthDeliveryTime(e.target.value)}
++                        placeholder="4?癒?봺 ??곴맒"
+                         className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                         required
+                       />
+                     </div>
++
+                     <button
+                       type="submit"
+                       className="w-full py-3 bg-[#202124] hover:bg-slate-800 text-white font-bold rounded-xl text-sm transition-all"
+                     >
+-                      媛?낇븯湲?-                    </button>
++                      揶쎛??뉖릭疫?                    </button>
+                   </form>
+                   <p className="text-[10px] text-slate-400 text-center">
+-                    媛??利됱떆 @stopfive.com 媛???대찓?쇱씠 遺?щ맗?덈떎
++                    揶쎛??筌앸맩??@stopfive.com 揶쎛????李??깆뵠 ?봔??留??덈뼄
+                   </p>
+                   <div className="text-center text-xs text-slate-400">
+-                    ?대? 怨꾩젙???덉쑝?좉???{' '}
++                    ??? ?④쑴?????됱몵?醫???{' '}
+                     <button onClick={() => setAuthMode('login')} className="font-bold text-[#202124] dark:text-white hover:underline">
+-                      濡쒓렇??-                    </button>
++                      嚥≪뮄???                    </button>
+                   </div>
+                 </div>
+                 <div className="text-center">
+                   <button onClick={() => setAuthMode('home')} className="text-xs text-slate-400 hover:text-slate-600 transition-all">
+-                    ???덉쑝濡??뚯븘媛湲?-                  </button>
++                    ????됱몵嚥????툡揶쎛疫?                  </button>
+                 </div>
+               </div>
+             </div>
+           )}
+ 
+-          {/* ?쒕뵫 ???붾㈃ (濡쒓렇??媛?????쒓굅, ?쒕퉬???뚭컻留? */}
++          {/* ??뺣뎃 ???遺얇늺 (嚥≪뮄???揶쎛??????볤탢, ??뺥돩?????뻣筌? */}
+           {authMode === 'home' && (
+           <>
+-          {/* ?쒕뵫 ?ㅻ뜑 */}
++          {/* ??뺣뎃 ??삳쐭 */}
+           <header className="h-16 px-8 flex items-center justify-between border-b border-slate-200/40 bg-white/20 dark:bg-slate-950/20 backdrop-blur-md z-40 fixed top-0 left-0 right-0">
+             <div className="flex items-center space-x-2">
+               <span className="w-6 h-6 bg-primary rounded-lg flex items-center justify-center text-white text-xs font-bold">5</span>
+@@ -394,38 +472,34 @@ export default function Home() {
+                 onClick={() => setAuthMode('login')}
+                 className="px-4 py-1.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#202124] dark:text-white text-xs font-bold rounded-full transition-all"
+               >
+-                濡쒓렇??-              </button>
++                嚥≪뮄???              </button>
+               <button
+                 onClick={() => setAuthMode('register')}
+                 className="px-4 py-1.5 bg-[#202124] hover:bg-slate-800 text-white text-xs font-bold rounded-full transition-all"
+               >
+-                ?뚯썝媛??-              </button>
++                ???뜚揶쎛??              </button>
+             </div>
+           </header>
+ 
+-          {/* 硫붿씤 ?덉뼱濡??뱀뀡 */}
++          {/* 筌롫뗄????됰선嚥??諭??*/}
+           <main className="flex-1 pt-24 pb-20 px-6 flex flex-col items-center max-w-6xl mx-auto w-full space-y-16">
+             <div className="text-center max-w-2xl space-y-6 mt-8">
+               <span className="px-3.5 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-primary text-[10px] font-bold rounded-full tracking-wider uppercase">
+-                留덉씠?щ줈 ?됰룞 ?좊룄 硫붿씪 ?묓릟 ?쒕퉬??-              </span>
++                筌띾뜆???以???곕짗 ?醫딅즲 筌롫뗄???臾볥쬉 ??뺥돩??              </span>
+               <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+-                留ㅼ씪 媛숈? ?쒓컙,<br />
+-                <span className="bg-gradient-to-r from-primary to-teal-500 bg-clip-text text-transparent">AI? ?묓릟 硫붿씪</span>濡??됰룞??臾쇨섕瑜??몄꽭??-              </h1>
++                筌띲끉??揶쏆늿? ??볦퍢,<br />
++                <span className="bg-gradient-to-r from-primary to-teal-500 bg-clip-text text-transparent">AI?? ?臾볥쬉 筌롫뗄??/span>嚥???곕짗???얠눊?뺟몴??紐꾧쉭??              </h1>
+               <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+-                蹂듭옟???대퉿 ?몃옒而ㅻ굹 ????紐⑸줉? ?딆쑝?몄슂. 
+-                留ㅼ씪 ?섏떊?⑥쑝濡?諛곕떖?섎뒗 30珥덉쭨由?留덉씠?щ줈 ?≪뀡???뺤씤?섍퀬, ?듭옣??蹂대궡???묒? ?쎌냽??諛섎났?쇰줈 ?됰룞 ?듦????뺤꽦?⑸땲??
++                癰귣벊????????紐껋삋?뚣끇援?????筌뤴뫖以?? ??놁몵?紐꾩뒄. 
++                筌띲끉????뤿뻿??μ몵嚥?獄쏄퀡???롫뮉 30?λ뜆彛①뵳?筌띾뜆???以???る???類ㅼ뵥??랁? ???삢??癰귣?沅???臾? ??뚮꺗??獄쏆꼶???곗쨮 ??곕짗 ??????類ㅺ쉐??몃빍??
+               </p>
+             </div>
+ 
+-            {/* 3??5??泥댄뿕 肄붿뒪 ?꾨━酉?移대뱶??濡쒕뱶留?*/}
++            {/* 3??5??筌ｋ똾肉??꾨뗄???袁ⓥ봺??燁삳?諭??嚥≪뮆諭띰쭕?*/}
+             <div className="w-full space-y-8">
+               <div className="text-center space-y-2">
+-                <h2 className="text-xl font-bold tracking-tight">3??5???꾩꽦 泥댄뿕 肄붿뒪 誘몃━蹂닿린</h2>
+-                <p className="text-xs text-slate-400 max-w-sm mx-auto">?묒떖?쇱씪 ?쒓퀎瑜?源⑦듃由ш린 ?꾪빐 怨좎븞??珥덇컙??肄붿뒪 吏꾪뻾??/p>
++                <h2 className="text-xl font-bold tracking-tight">3??5???袁⑷쉐 筌ｋ똾肉??꾨뗄??沃섎챶?곮퉪?용┛</h2>
++                <p className="text-xs text-slate-400 max-w-sm mx-auto">?臾믩뼎??깆뵬 ??볧롧몴?繹먥뫂?껆뵳?由??袁る퉸 ?⑥쥙釉???λ뜃而???꾨뗄??筌욊쑵六??/p>
+               </div>
+ 
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+@@ -434,21 +508,21 @@ export default function Home() {
+                   <div className="space-y-3">
+                     <div className="flex items-center justify-between">
+                       <span className="text-[11px] font-bold text-primary uppercase">Day 1</span>
+-                      <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950 text-[10px] font-semibold text-primary rounded">2??誘몄뀡</span>
++                      <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950 text-[10px] font-semibold text-primary rounded">2??沃섎챷??/span>
+                     </div>
+-                    <h3 className="text-base font-bold">1?④퀎: 泥?留뚮궓怨??됰룞???몃━嫄?/h3>
++                    <h3 className="text-base font-bold">1??ｍ? 筌?筌띾슢沅볠???곕짗???紐꺿봺椰?/h3>
+                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+-                      ?대찓??媛?낃낵 ?숈떆??1?뚯감 硫붿씪???좎븘?듬땲?? ?섏떊?⑥뿉??利됱떆 ?쎄퀬, ?듭옣???낅젰?섏뿬 ?듦? ?ъ젙??泥??쒕룞??寃곷땲??
++                      ??李??揶쎛??껊궢 ??덈뻻??1???컧 筌롫뗄????醫롫툡??щ빍?? ??뤿뻿??λ퓠??筌앸맩????꾪? ???삢????낆젾??뤿연 ??? ?????筌???뺣짗??野껉낮???
+                     </p>
+                   </div>
+                   <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 flex flex-col space-y-2 text-[11px] text-slate-400">
+                     <div className="flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+-                      <span>1?뚯감: 泥??곗뺨 ?몄궗? ?뚭컧 ?뚯떊</span>
++                      <span>1???컧: 筌??怨쀫벰 ?紐꾧텢?? ???빵 ???뻿</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+-                      <span>2?뚯감: ?됰룞 ?몃━嫄??⑥돩湲? 湲곗?媛???</span>
++                      <span>2???컧: ??곕짗 ?紐꺿봺椰???λ룴疫? 疫꿸퀣?揶???</span>
+                     </div>
+                   </div>
+                 </div>
+@@ -458,21 +532,21 @@ export default function Home() {
+                   <div className="space-y-3">
+                     <div className="flex items-center justify-between">
+                       <span className="text-[11px] font-bold text-amber-500 uppercase">Day 2</span>
+-                      <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-950 text-[10px] font-semibold text-amber-500 rounded">2??誘몄뀡</span>
++                      <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-950 text-[10px] font-semibold text-amber-500 rounded">2??沃섎챷??/span>
+                     </div>
+-                    <h3 className="text-base font-bold">2?④퀎: ?묒? ?곗냽?깃낵 由щ벉媛??뺤꽦</h3>
++                    <h3 className="text-base font-bold">2??ｍ? ?臾? ?怨쀫꺗?源껊궢 ?귐됰쾳揶??類ㅺ쉐</h3>
+                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+-                      ?쎌냽???섎（媛 吏?섎㈃ 3?뚯감 誘몄뀡??諛쒖넚?⑸땲?? 媛蹂띻쾶 誘몄뀡???꾨즺?섍퀬 4?뚯감???댄뻾 ?④퀎濡??먯뿰?ㅻ젅 ?댁뼱吏묐땲??
++                      ??뚮꺗????롳펷揶쎛 筌왖??롢늺 3???컧 沃섎챷???獄쏆뮇???몃빍?? 揶쎛癰귣씧苡?沃섎챷????袁⑥┷??랁?4???컧????꾨뻬 ??ｍ롦에??癒?염??살쟿 ??곷선筌욌쵎???
+                     </p>
+                   </div>
+                   <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 flex flex-col space-y-2 text-[11px] text-slate-400">
+                     <div className="flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+-                      <span>3?뚯감: 留덉씠?щ줈 ?됰룞 誘몄뀡 諛??듭옣</span>
++                      <span>3???컧: 筌띾뜆???以???곕짗 沃섎챷??獄????삢</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+-                      <span>4?뚯감: ?쎌냽???먯쭊???곸쓳 諛?由ы룷??/span>
++                      <span>4???컧: ??뚮꺗???癒?춭???怨몄벓 獄??귐뗫７??/span>
+                     </div>
+                   </div>
+                 </div>
+@@ -482,127 +556,218 @@ export default function Home() {
+                   <div className="space-y-3">
+                     <div className="flex items-center justify-between">
+                       <span className="text-[11px] font-bold text-emerald-500 uppercase">Day 3</span>
+-                      <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950 text-[10px] font-semibold text-emerald-500 rounded">理쒖쥌 1??/span>
++                      <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950 text-[10px] font-semibold text-emerald-500 rounded">筌ㅼ뮇伊?1??/span>
+                     </div>
+-                    <h3 className="text-base font-bold">3?④퀎: 理쒖쥌 ?꾩꽦 諛??꾩＜ 由ы룷??/h3>
++                    <h3 className="text-base font-bold">3??ｍ? 筌ㅼ뮇伊??袁⑷쉐 獄??袁⑼폒 ?귐뗫７??/h3>
+                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+-                      留덉?留?3?쇱감 硫붿씪 ?묓릟???앸쭏移섎㈃, 珥?5?뚯쓽 泥댄뿕 肄붿뒪媛 ?꾩쟾???앸궔?덈떎. 蹂몄씤??由ы룷?몃? ?듯빐 袁몄????섏튂瑜??뺤씤?⑸땲??
++                      筌띾뜆?筌?3??깃컧 筌롫뗄???臾볥쬉????몄춳燁살꼶?? ??5???벥 筌ｋ똾肉??꾨뗄?ゅ첎? ?袁⑹읈????멸텛??덈뼄. 癰귣챷????귐뗫７?紐? ???퉸 熬곷챷?????륂뒄???類ㅼ뵥??몃빍??
+                     </p>
+                   </div>
+                   <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 flex flex-col space-y-2 text-[11px] text-slate-400">
+                     <div className="flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+-                      <span>5?뚯감: 理쒖쥌 ?꾩꽦 ?쇰뱶諛?硫붿씪 ?뚯떊</span>
++                      <span>5???컧: 筌ㅼ뮇伊??袁⑷쉐 ??곕굡獄?筌롫뗄?????뻿</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+-                      <span>泥댄뿕 肄붿뒪 ?꾩＜ 紐낆삁 ?몃줈???띾뱷</span>
++                      <span>筌ｋ똾肉??꾨뗄???袁⑼폒 筌뤿굞???紐껋쨮????얜굣</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+ 
+-            {/* CTA 踰꾪듉 ?곸뿭 */}
++            {/* CTA 甕곌쑵???怨몃열 */}
+             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
+               <button
+                 onClick={() => setAuthMode('register')}
+                 className="px-8 py-3.5 bg-[#202124] hover:bg-slate-800 text-white font-bold rounded-full text-sm transition-all"
+               >
+-                3??泥댄뿕 肄붿뒪 ?쒖옉?섍린
++                3??筌ｋ똾肉??꾨뗄????뽰삂??띾┛
+               </button>
+               <button
+                 onClick={() => setAuthMode('login')}
+                 className="px-8 py-3.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-bold rounded-full text-sm transition-all"
+               >
+-                湲곗〈 怨꾩젙?쇰줈 濡쒓렇??-              </button>
++                疫꿸퀣???④쑴???곗쨮 嚥≪뮄???              </button>
+             </div>
+           </main>
+           </>
+           )}
+         </div>
+       ) : currentUser.role === 'admin' ? (
+-        /* 2-A. 愿由ъ옄 ??쒕낫??(Gmail ?대뱶誘?肄섏넄) */
++        /* 2-A. ?온?귐딆쁽 ????뺣궖??(Gmail ??諭띈첋??꾩꼷?? */
+         <div className="flex-1 flex overflow-hidden h-screen pt-0 bg-[#F6F8FC] dark:bg-slate-950 text-slate-900 dark:text-white">
+-          {/* A-1. 愿由ъ옄 醫뚯륫 ?ъ씠?쒕컮 */}
++          {/* A-1. ?온?귐딆쁽 ?ル슣瑜??????뺤뺍 */}
+           <aside className="w-64 bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex flex-col justify-between shrink-0 p-3">
+             <div className="space-y-4">
+-              {/* 濡쒓퀬 ?곸뿭 - ?대┃ ???덉쑝濡??대룞 */}
++              {/* 嚥≪뮄???怨몃열 - ????????됱몵嚥???猷?*/}
+               <button
+-                onClick={() => { handleLogout(); setAuthMode('home'); }}
++                onClick={() => { setAdminTab('users'); }}
+                 className="flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left"
+               >
+                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
+                 <span className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
+-                <span className="px-1.5 py-0.5 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-[8px] font-bold rounded border border-red-200 dark:border-red-900">愿由ъ옄</span>
++                <span className="px-1.5 py-0.5 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-[8px] font-bold rounded border border-red-200 dark:border-red-900">?온?귐딆쁽</span>
+               </button>
+ 
+-              {/* Compose ?좉퇋 硫붿씪 ?곌린 踰꾪듉 (?섎룞 ?쒖뒪??諛쒖넚??紐⑤떖) */}
+-              <div className="px-1.5">
++              {/* Compose ?醫됲뇣 筌롫뗄???怨뚮┛ 甕곌쑵??(??롫짗 ??뽯뮞??獄쏆뮇???筌뤴뫀?? */}
++              <div className="px-1.5 mt-2 mb-2">
+                 <button
+                   onClick={() => setAdminTab('compose')}
+-                  className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-sm text-[#202124] dark:text-white font-bold rounded-full text-xs transition-all flex items-center justify-center space-x-2 shadow-sm"
++                  className="ml-3 pl-3 pr-6 py-4 bg-[#c2e7ff] hover:bg-[#b5e0fc] dark:bg-[#004a77] dark:hover:bg-[#003a5c] text-[#001d35] dark:text-white text-[14px] font-medium rounded-2xl transition-all shadow-sm flex items-center gap-3 w-fit"
+                 >
+-                  <svg className="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                  <svg className="w-5 h-5 text-[#001d35] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                   </svg>
+-                  <span>硫붿씪 諛쒖넚 ?쒕?</span>
++                  <span>沃섎챷??獄쏆뮇??/span>
+                 </button>
+               </div>
+ 
+-              {/* ?ㅻ퉬寃뚯씠??硫붾돱 */}
+-              <nav className="space-y-1 px-1.5">
++              {/* ??삵돩野껊슣???筌롫뗀??*/}
++              <nav className="space-y-0 px-1.5">
+                 <button
+-                  onClick={() => setAdminTab('users')}
+-                  className={`w-full flex items-center justify-between px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
++                  onClick={() => { setAdminTab('inbox'); setSelectedEmail(null); }}
++                  className={`w-full flex items-center justify-between px-6 h-8 rounded-full text-[14px] transition-all ${
++                    adminTab === 'inbox' 
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
++                  }`}
++                >
++                  <div className="flex items-center space-x-3">
++                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
++                    </svg>
++                    <span>獄쏆룇??紐???/span>
++                  </div>
++                  {emails.filter(e => e.receiver === 'team@stopfive.com' && e.status === 'unread').length > 0 && (
++                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
++                      {emails.filter(e => e.receiver === 'team@stopfive.com' && e.status === 'unread').length}
++                    </span>
++                  )}
++                </button>
++
++                <button
++                  onClick={() => { setAdminTab('sent'); setSelectedEmail(null); }}
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
++                    adminTab === 'sent' 
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
++                  }`}
++                >
++                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
++                  </svg>
++                  <span>癰귣?沅?紐???/span>
++                </button>
++
++                <button
++                  onClick={() => { setAdminTab('archive'); setSelectedEmail(null); }}
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
++                    adminTab === 'archive' 
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
++                  }`}
++                >
++                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
++                  </svg>
++                  <span>??뤿뻿癰귣떯???/span>
++                </button>
++
++                <button
++                  onClick={() => { setAdminTab('users'); setSelectedEmail(null); }}
++                  className={`w-full flex items-center justify-between px-6 h-8 rounded-full text-[14px] transition-all ${
+                     adminTab === 'users' 
+-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                   }`}
+                 >
+                   <div className="flex items-center space-x-3">
+                     <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                     </svg>
+-                    <span>媛???좎? ?꾪솴</span>
++                    <span>揶쎛???醫? ?袁れ넺</span>
+                   </div>
+                 </button>
+ 
+                 <button
+-                  onClick={() => setAdminTab('statistics')}
+-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
++                  onClick={() => { setAdminTab('statistics'); setSelectedEmail(null); }}
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
+                     adminTab === 'statistics' 
+-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                   }`}
+                 >
+                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+                   </svg>
+-                  <span>醫낇빀 ?듦퀎 由ы룷??/span>
++                  <span>?ル굟鍮 ?????귐뗫７??/span>
++                </button>
++
++                <button
++                  onClick={() => { setAdminTab('scheduled-compose'); setSelectedEmail(null); }}
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
++                    adminTab === 'scheduled-compose' 
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
++                  }`}
++                >
++                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
++                  </svg>
++                  <span>沃섎챷????됰튋</span>
++                </button>
++
++                <button
++                  onClick={() => { setAdminTab('scheduled-manage'); setSelectedEmail(null); }}
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
++                    adminTab === 'scheduled-manage' 
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
++                  }`}
++                >
++                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
++                  </svg>
++                  <span>??됰튋 沃섎챷???온??/span>
++                </button>
++
++                <button
++                  onClick={() => { setAdminTab('settings'); setSelectedEmail(null); }}
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
++                    adminTab === 'settings' 
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
++                  }`}
++                >
++                  <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
++                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
++                  </svg>
++                  <span>??띻펾 ??쇱젟</span>
+                 </button>
+               </nav>
+             </div>
+ 
+-            {/* ?대뱶誘??ъ씠?쒕컮 ?섎떒 濡쒓렇???몄뀡 ?붿빟 */}
++            {/* ??諭띈첋??????뺤뺍 ??롫뼊 嚥≪뮄????紐꾨??遺용튋 */}
+             <div className="space-y-2 p-1.5 pb-4">
+               <div className="text-[9px] text-slate-400 px-3 py-1 space-y-0.5">
+-                <div>愿由ъ옄 怨꾩젙:</div>
+-                <div className="text-[#1f1f1f] dark:text-white truncate font-semibold">?대뱶誘??댁쁺?</div>
++                <div>?온?귐딆쁽 ?④쑴??</div>
++                <div className="text-[#1f1f1f] dark:text-white truncate font-semibold">??諭띈첋???곸겫??</div>
+                 <div className="truncate text-slate-450 font-light">{currentUser.virtualEmail}</div>
+               </div>
+             </div>
+           </aside>
+ 
+-          {/* A-2. 愿由ъ옄 硫붿씤 蹂몃Ц ?곸뿭 (?뚮몢由??녿뒗 吏硫붿씪 ?됰㈃?? */}
++          {/* A-2. ?온?귐딆쁽 筌롫뗄??癰귣챶揆 ?怨몃열 (???あ????용뮉 筌왖筌롫뗄????겹늺?? */}
+           <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 border-none rounded-none m-0 shadow-none">
+-            {/* ?곷떒 ?묐컮 */}
++            {/* ?怨룸뼊 ?臾먯뺍 */}
+             <header className="h-14 px-6 flex items-center justify-between shrink-0 bg-transparent border-b border-slate-100 dark:border-slate-800">
+               <div className="flex items-center space-x-2">
+                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Admin Console</span>
+                 <span className="text-xs text-slate-350">|</span>
+-                <span className="text-xs font-bold text-red-600 dark:text-red-400">?쒖뒪???쒖뼱 ?쇳꽣</span>
++                <span className="text-xs font-bold text-red-600 dark:text-red-400">??뽯뮞????뽯선 ??녠숲</span>
+               </div>
+               <button
+                 onClick={handleLogout}
+@@ -612,26 +777,222 @@ export default function Home() {
+               </button>
+             </header>
+ 
+-            {/* ???꾪솚 酉?*/}
+-            <main className="flex-1 overflow-y-auto p-8 max-w-6xl w-full mx-auto space-y-8">
+-              {adminTab === 'users' ? (
+-                /* 媛???좎? 紐⑸줉 ?뚯씠釉?*/
+-                <div className="space-y-6">
+-                  <div>
+-                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">媛???좎? ?꾪솴 愿由?/h1>
+-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">?쒕퉬?ㅼ뿉 媛?낅맂 媛??硫붿씪 ?ъ슜?먯쓽 泥댄뿕 吏꾪뻾??議고쉶 諛?硫붿씪 諛쒖넚 媛뺤젣 ?쒖뼱</p>
+-                  </div>
++            {/* ???袁れ넎 ??*/}
++            <main className="flex-1 overflow-y-auto w-full bg-white dark:bg-slate-900 flex flex-col px-4 lg:px-8 py-4">
++              {(adminTab === 'inbox' || adminTab === 'sent' || adminTab === 'archive') ? (
++                /* ?온?귐딆쁽????뤿뻿??(?醫???쇱벥 ???삢) */
++                <div className="flex-1 flex flex-col">
++                  
++                  {selectedEmail ? (() => {
++                    const isReply = selectedEmail.sender === 'team@stopfive.com' && selectedEmail.replyContent;
++                    const displaySender = isReply ? selectedEmail.receiver : selectedEmail.sender;
++                    const displayBody = isReply ? selectedEmail.replyContent : selectedEmail.body;
++                    const displaySubject = isReply ? `Re: ${selectedEmail.subject}` : selectedEmail.subject;
++                    const displayDate = isReply ? selectedEmail.answeredAt : selectedEmail.createdAt;
++                    return (
++                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-none flex flex-col">
++                      <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
++                        <button 
++                          onClick={() => setSelectedEmail(null)}
++                          className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
++                        >
++                          <span>????살쨮揶쎛疫?/span>
++                        </button>
++                      </div>
++                      <div className="p-8 space-y-6">
++                        <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
++                          <h2 className="text-2xl font-bold tracking-tight text-[#202124] dark:text-white leading-tight">
++                            {displaySubject}
++                          </h2>
++                          <div className="flex items-center justify-between">
++                            <div className="flex items-center space-x-3">
++                              <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
++                                {(displaySender[0] || 'U').toUpperCase()}
++                              </div>
++                              <div className="space-y-0.5">
++                                <div className="text-[13px] text-[#202124] dark:text-white">
++                                  <span className="font-bold">{displaySender.split('@')[0]}</span>
++                                  <span className="text-slate-400 text-xs font-light ml-2">&lt;{displaySender}&gt;</span>
++                                </div>
++                                <div className="flex items-center space-x-2">
++                                  <span className="font-bold">?? 獄쏆룇??紐???/span>
++                                  <span className="text-slate-400 text-xs font-light ml-2">&lt;team@stopfive.com&gt;</span>
++                                </div>
++                              </div>
++                            </div>
++                            <div className="text-[11px] text-slate-400">
++                              {new Date(displayDate).toLocaleString()}
++                            </div>
++                          </div>
++                        </div>
++                        <div className="text-sm text-slate-800 dark:text-slate-300 leading-relaxed whitespace-pre-wrap min-h-[150px]">
++                          {displayBody}
++                        </div>
++                      </div>
+ 
+-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-none">
+-                    <table className="w-full text-left border-collapse text-sm">
++                      {/* ???삢 ?怨뚮┛ ?怨몃열 */}
++                      <div className="p-8 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
++                        <div className="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
++                          <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2 border-b border-slate-200 dark:border-slate-700">
++                            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">?醫??癒?쓺 ???삢 癰귣?沅→묾?/span>
++                          </div>
++                          <textarea
++                            value={replyText}
++                            onChange={(e) => setReplyText(e.target.value)}
++                            placeholder="??용궔???醫??癒?쓺 癰귣?沅???곸뒠???臾믨쉐??뤾쉭??.."
++                            className="w-full p-4 bg-transparent text-sm focus:outline-none min-h-[150px] resize-y text-[#202124] dark:text-white placeholder-slate-400"
++                          />
++                          <div className="px-4 py-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
++                            <button
++                              onClick={async () => {
++                                if (!replyText.trim()) return;
++                                const sent = await sendAdminMailToUser(displaySender, displaySubject, replyText);
++                                if (sent) {
++                                  // Mark the user's message as read/replied by using markEmailAsArchived (which we'll reuse, or just leave it)
++                                  await markEmailAsArchived(selectedEmail.id);
++                                  setReplyText('');
++                                  setSelectedEmail(null);
++                                  // Refresh admin emails
++                                  const user = await getCurrentUser();
++                                  if (user) {
++                                    setEmails(await getLocalEmails(user.virtualEmail));
++                                  }
++                                }
++                              }}
++                              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-xs transition-colors shadow-sm"
++                            >
++                              獄쏆뮇???띾┛
++                            </button>
++                          </div>
++                        </div>
++                      </div>
++                    </div>
++                  )})() : (() => {
++                    const adminFilteredEmails = emails.filter(e => {
++                      if (adminTab === 'inbox') {
++                        return (e.receiver === 'team@stopfive.com' && e.status !== 'archived') || 
++                               (e.sender === 'team@stopfive.com' && e.replyContent && !readAdminReplies.includes(e.id));
++                      }
++                      if (adminTab === 'sent') {
++                        return e.sender === 'team@stopfive.com' && new Date(e.createdAt) <= new Date();
++                      }
++                      if (adminTab === 'archive') {
++                        return (e.receiver === 'team@stopfive.com' && e.status === 'archived') ||
++                               (e.sender === 'team@stopfive.com' && e.replyContent && readAdminReplies.includes(e.id));
++                      }
++                      return false;
++                    }).sort((a: any, b: any) => {
++                      const timeA = (a.sender === 'team@stopfive.com' && a.replyContent) ? new Date(a.answeredAt).getTime() : new Date(a.createdAt).getTime();
++                      const timeB = (b.sender === 'team@stopfive.com' && b.replyContent) ? new Date(b.answeredAt).getTime() : new Date(b.createdAt).getTime();
++                      return timeB - timeA;
++                    });
++
++                    return (
++                      <div className="flex-1 overflow-y-auto border-t border-slate-200 dark:border-slate-800">
++                        {adminFilteredEmails.length === 0 ? (
++                          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
++                            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
++                              <svg className="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
++                              </svg>
++                            </div>
++                            <p className="text-sm">筌롫뗄?????곷뮸??덈뼄.</p>
++                          </div>
++                        ) : (
++                          <table className="w-full text-left border-collapse text-[14px]">
++                            <thead>
++                              <tr className="bg-white dark:bg-slate-900 text-[#5f6368] dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-normal text-[13px] h-10">
++                                <th className="px-4 py-2 font-normal w-12 text-center whitespace-nowrap">
++                                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-slate-500" disabled />
++                                </th>
++                                <th className="px-2 py-2 font-normal w-10 text-center whitespace-nowrap"></th>
++                                <th className="px-2 py-2 font-normal whitespace-nowrap">{adminTab === 'sent' ? '獄쏆룆????? : '癰귣?沅????}</th>
++                                <th className="px-2 py-2 font-normal whitespace-nowrap">??뺛걠</th>
++                                <th className="px-4 py-2 font-normal text-right whitespace-nowrap w-24">{adminTab === 'sent' ? '癰귣?沅??볦퍢' : '獄쏆룇???볦퍢'}</th>
++                              </tr>
++                            </thead>
++                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
++                              {adminFilteredEmails.map(email => {
++                              const isReply = email.sender === 'team@stopfive.com' && email.replyContent;
++                              const isUnread = adminTab !== 'sent' && ((!isReply && email.status === 'unread') || (isReply && !readAdminReplies.includes(email.id)));
++                              
++                              const displaySender = isReply ? email.receiver : email.sender;
++                              const displayBody = isReply ? email.replyContent : email.body;
++                              const displaySubject = isReply ? `Re: ${email.subject}` : email.subject;
++                              const displayDate = isReply ? email.answeredAt : email.createdAt;
++                              
++                              return (
++                              <tr 
++                                key={email.id} 
++                                onClick={() => {
++                                  setSelectedEmail(email);
++                                  if (email.status === 'unread' && !isReply) {
++                                    markEmailAsArchived(email.id).then(() => {
++                                      setEmails(prev => prev.map(e => e.id === email.id ? { ...e, status: 'archived' } : e));
++                                    });
++                                  }
++                                  if (isReply && !readAdminReplies.includes(email.id)) {
++                                    setReadAdminReplies(prev => [...prev, email.id]);
++                                  }
++                                }}
++                                className={`h-10 hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] hover:z-10 relative cursor-pointer border-b border-[#f1f3f4] dark:border-slate-800 transition-all ${
++                                  isUnread
++                                    ? 'bg-white dark:bg-slate-900 font-bold text-[#000000] dark:text-white' 
++                                    : 'bg-[#F2F5F9]/40 dark:bg-slate-850/10 text-slate-500 dark:text-slate-400 font-normal'
++                                }`}
++                              >
++                                <td className="px-4 py-0 text-center w-12 whitespace-nowrap">
++                                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-slate-500 cursor-pointer" onClick={(e) => e.stopPropagation()} />
++                                </td>
++                                <td className="px-2 py-0 text-center w-10 whitespace-nowrap text-slate-350 dark:text-slate-700">
++                                  <svg className="w-4 h-4 hover:text-amber-400 transition-all cursor-pointer inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" onClick={(e) => e.stopPropagation()}>
++                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.246.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.906a1 1 0 00.95-.69l1.519-4.674z" />
++                                  </svg>
++                                </td>
++                                <td className="px-2 py-0 w-48 truncate whitespace-nowrap text-[14px]">
++                                  <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
++                                    {displaySender.split('@')[0]}
++                                  </span>
++                                </td>
++                                <td className="px-2 py-0 w-full whitespace-nowrap text-[14px]">
++                                  <div className="flex items-center space-x-2 max-w-2xl">
++                                    <span className={`truncate ${isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}`}>
++                                      {displaySubject}
++                                    </span>
++                                    <span className="text-slate-400 truncate font-light text-[13px]">??{displayBody}</span>
++                                  </div>
++                                </td>
++                                <td className="px-4 py-0 text-right whitespace-nowrap w-24 text-[12px]">
++                                  <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
++                                    {new Date(displayDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
++                                  </span>
++                                </td>
++                              </tr>
++                            )})}
++                          </tbody>
++                        </table>
++                      )}
++                    </div>
++                  );
++                })()}
++                </div>
++              ) : adminTab === 'users' ? (
++                /* 揶쎛???醫? 筌뤴뫖以????뵠??*/
++                <div className="flex-1 flex flex-col">
++
++                  <div className="bg-white dark:bg-slate-900 shadow-none border-t border-slate-100 dark:border-slate-800">
++                    <table className="w-full text-left border-collapse text-[14px]">
+                       <thead>
+-                        <tr className="bg-slate-50 dark:bg-slate-850 text-slate-500 border-b border-slate-200 dark:border-slate-850 font-bold text-xs uppercase">
+-                          <th className="p-4 pl-6">?ъ슜?먮챸</th>
+-                          <th className="p-4">媛???대찓??/th>
+-                          <th className="p-4">媛???대찓??/th>
+-                          <th className="p-4">?섏떊 ?щ쭩?쒓컙</th>
+-                          <th className="p-4">泥댄뿕 吏꾪뻾瑜?/th>
+-                          <th className="p-4 text-right pr-6">?묓릟 ?쒕??덉씠??/th>
++                        <tr className="bg-white dark:bg-slate-900 text-[#5f6368] dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-normal text-[13px] h-10">
++                          <th className="px-4 py-2 font-normal w-12 text-center whitespace-nowrap">
++                            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-slate-500" disabled />
++                          </th>
++                          <th className="px-2 py-2 font-normal whitespace-nowrap">????癒?구</th>
++                          <th className="px-2 py-2 font-normal whitespace-nowrap">揶쎛????李??/th>
++                          <th className="px-2 py-2 font-normal whitespace-nowrap">揶쎛????李??/th>
++                          <th className="px-2 py-2 font-normal whitespace-nowrap">??彛??볦퍢</th>
++                          <th className="px-2 py-2 font-normal w-40 whitespace-nowrap">筌욊쑵六양몴?/th>
++                          <th className="px-4 py-2 font-normal text-right whitespace-nowrap">?????됱뵠??/th>
+                         </tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+@@ -640,12 +1001,15 @@ export default function Home() {
+                           const stepPercent = Math.min(100, Math.round((user.courseStep / 5) * 100));
+                           
+                           return (
+-                            <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 text-[#202124] dark:text-slate-200">
+-                              <td className="p-4 pl-6 font-bold">{user.name}</td>
+-                              <td className="p-4 text-xs font-light text-slate-500">{user.email}</td>
+-                              <td className="p-4 text-xs font-semibold text-[#0b57d0] dark:text-blue-400">{user.virtualEmail}</td>
+-                              <td className="p-4 font-mono text-xs">{user.deliveryTime}</td>
+-                              <td className="p-4">
++                            <tr key={user.id} className="h-10 hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] hover:z-10 relative bg-white hover:bg-white dark:bg-slate-900 text-[#202124] dark:text-slate-200 cursor-default transition-all border-b border-[#f1f3f4] dark:border-slate-800">
++                              <td className="px-4 py-0 text-center w-12 whitespace-nowrap">
++                                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-slate-500 cursor-pointer" />
++                              </td>
++                              <td className="px-2 py-0 font-medium max-w-xs truncate whitespace-nowrap">{user.name}</td>
++                              <td className="px-2 py-0 text-[#5f6368] dark:text-slate-400 max-w-xs truncate whitespace-nowrap">{user.email}</td>
++                              <td className="px-2 py-0 font-medium text-[#1a73e8] dark:text-blue-400 max-w-xs truncate whitespace-nowrap">{user.virtualEmail}</td>
++                              <td className="px-2 py-0 text-[#5f6368] font-mono whitespace-nowrap">{user.deliveryTime}</td>
++                              <td className="px-2 py-0 whitespace-nowrap w-40">
+                                 <div className="flex items-center space-x-2">
+                                   <div className="w-24 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                     <div 
+@@ -653,21 +1017,20 @@ export default function Home() {
+                                       style={{ width: `${stepPercent}%` }}
+                                     />
+                                   </div>
+-                                  <span className="text-xs font-bold">
+-                                    {user.courseStep}?뚯감 ({stepPercent}%)
++                                  <span className="text-[12px] text-[#5f6368] whitespace-nowrap">
++                                    {user.courseStep}???컧 ({stepPercent}%)
+                                   </span>
+                                 </div>
+                               </td>
+-                              <td className="p-4 text-right pr-6">
++                              <td className="px-4 py-0 text-right whitespace-nowrap">
+                                 {isFinished ? (
+-                                  <span className="text-xs font-bold text-emerald-600">泥댄뿕 ?꾨즺</span>
++                                  <span className="text-xs font-bold text-emerald-600 whitespace-nowrap">筌ｋ똾肉??袁⑥┷</span>
+                                 ) : (
+                                   <button
+                                     onClick={() => handleAdminTriggerNextDay(user.virtualEmail)}
+-                                    className="px-3.5 py-1.5 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white border border-slate-300 dark:border-slate-750 font-bold rounded-full text-xs transition-all shadow-none"
++                                    className="px-3 py-1 text-[12px] font-medium text-[#1a73e8] hover:bg-[#f1f3f4] dark:text-blue-400 dark:hover:bg-slate-800 rounded transition-colors border border-transparent hover:border-slate-200 whitespace-nowrap"
+                                   >
+-                                    ?ㅼ쓬 硫붿씪 諛쒖넚 ??-                                  </button>
++                                    ??쇱벉 獄쏆뮇????                                  </button>
+                                 )}
+                               </td>
+                             </tr>
+@@ -678,31 +1041,31 @@ export default function Home() {
+                   </div>
+                 </div>
+               ) : adminTab === 'compose' ? (
+-                /* ?대뱶誘??몄??곌린 - ?댁슜???몄??곌린 ?щ㎎怨??꾩쟾???듭씪 */
++                /* ??諭띈첋??紐??怨뚮┛ - ??곸뒠???紐??怨뚮┛ ???롦??袁⑹읈?????뵬 */
+                 <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-8">
+-                  {/* ?대찓???곸꽭 蹂닿린? ?숈씪???곷떒 Back 諛?*/}
++                  {/* ??李???怨멸쉭 癰귣떯由?? ??덉뵬???怨룸뼊 Back 獄?*/}
+                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
+                     <button
+                       onClick={() => setAdminTab('users')}
+                       className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
+                     >
+-                      <span>??Back to users</span>
++                      <span>??Back to users</span>
+                     </button>
+                   </div>
+ 
+                   <div className="flex-1 overflow-y-auto p-8 space-y-6">
+-                    {/* ?대찓???곸꽭 蹂닿린? ?숈씪???쒕ぉ ?곸뿭 */}
++                    {/* ??李???怨멸쉭 癰귣떯由?? ??덉뵬????뺛걠 ?怨몃열 */}
+                     <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
+                       <div className="flex items-center space-x-3">
+                         <h2 className="text-2xl font-bold tracking-tight text-[#202124] dark:text-white leading-tight">
+-                          硫붿씪 諛쒖넚 ?쒕??덉씠??+                          沃섎챷??獄쏆뮇??                         </h2>
+                         <span className="px-2 py-0.5 bg-[#f1f3f4] dark:bg-slate-800 text-[#5f6368] dark:text-slate-450 text-[10px] font-medium rounded border border-slate-200 dark:border-slate-700">
+-                          愿由ъ옄 諛쒖넚
++                          ?온?귐딆쁽 獄쏆뮇??                         </span>
+                       </div>
+ 
+-                      {/* 諛쒖떊???ㅻ뜑 */}
++                      {/* 獄쏆뮇?????삳쐭 */}
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center space-x-3">
+                           <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+@@ -716,7 +1079,7 @@ export default function Home() {
+                             <div className="text-[11px] text-slate-400">
+                               <span>To: </span>
+                               <span className="font-medium text-slate-600 dark:text-slate-350">
+-                                {composeTo ? composeTo : '?섏떊 ????좎?瑜??좏깮?섏꽭??}
++                                {composeTo ? composeTo : '??뤿뻿 ?????醫????醫뤾문??뤾쉭??}
+                               </span>
+                             </div>
+                           </div>
+@@ -730,44 +1093,44 @@ export default function Home() {
+                       </div>
+                     </div>
+ 
+-                    {/* ?섏떊???좏깮 + ?쒕ぉ + 蹂몃Ц (?대찓???щ㎎ ?듭씪) */}
++                    {/* ??뤿뻿???醫뤾문 + ??뺛걠 + 癰귣챶揆 (??李?????????뵬) */}
+                     <form onSubmit={(e) => { e.preventDefault(); handleSendCompose(e); }} className="space-y-5">
+-                      {/* ?섏떊???좏깮 */}
++                      {/* ??뤿뻿???醫뤾문 */}
+                       <div className="space-y-1.5">
+-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">諛쏅뒗 ?щ엺</label>
++                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">獄쏆룆??????/label>
+                         <select
+                           value={composeTo}
+                           onChange={(e) => setComposeTo(e.target.value)}
+                           className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                           required
+                         >
+-                          <option value="">諛쒖넚 ????좎? ?좏깮</option>
++                          <option value="">獄쏆뮇???????醫? ?醫뤾문</option>
+                           {allUsers.filter(u => u.role !== 'admin').map(u => (
+                             <option key={u.id} value={u.virtualEmail}>{u.name} ({u.virtualEmail})</option>
+                           ))}
+                         </select>
+                       </div>
+ 
+-                      {/* ?쒕ぉ */}
++                      {/* ??뺛걠 */}
+                       <div className="space-y-1.5">
+-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">?쒕ぉ</label>
++                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??뺛걠</label>
+                         <input
+                           type="text"
+                           value={composeSubject}
+                           onChange={(e) => setComposeSubject(e.target.value)}
+-                          placeholder="?대찓???쒕ぉ???낅젰?섏꽭??
++                          placeholder="??李????뺛걠????낆젾??뤾쉭??
+                           className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                           required
+                         />
+                       </div>
+ 
+-                      {/* 蹂몃Ц */}
++                      {/* 癰귣챶揆 */}
+                       <div className="space-y-1.5">
+-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">WRITE MESSAGE (蹂몃Ц ?댁슜)</label>
++                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">WRITE MESSAGE (癰귣챶揆 ??곸뒠)</label>
+                         <textarea
+                           value={composeBody}
+                           onChange={(e) => setComposeBody(e.target.value)}
+-                          placeholder="蹂몃Ц ?댁슜???먯쑀濡?쾶 ?묒꽦?섏꽭??.."
++                          placeholder="癰귣챶揆 ??곸뒠???癒??嚥?苡??臾믨쉐??뤾쉭??.."
+                           className="w-full h-40 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
+                           required
+                         />
+@@ -781,84 +1144,276 @@ export default function Home() {
+                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                           </svg>
+-                          <span>諛쒖넚</span>
++                          <span>獄쏆뮇??/span>
+                         </button>
+                       </div>
+                     </form>
+                   </div>
+                 </div>
+-              ) : (
+-                /* 醫낇빀 ?듦퀎 ??*/
++              ) : adminTab === 'statistics' ? (
++                /* ?ル굟鍮 ??????*/
+                 <div className="space-y-6">
+                   <div>
+-                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">?쒕퉬??醫낇빀 吏??/h1>
+-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">StopFive 5??泥댄뿕 肄붿뒪???ㅼ떆媛??깃낵吏???붿빟</p>
++                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">??뺥돩???ル굟鍮 筌왖??/h1>
++                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">StopFive 5??筌ｋ똾肉??꾨뗄?????쇰뻻揶??源껊궢筌왖???遺용튋</p>
+                   </div>
+ 
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-6 rounded-2xl">
+-                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">珥?媛?낆옄 ??/div>
+-                      <div className="text-3xl font-black text-[#202124] dark:text-white mt-2">{allUsers.length} 紐?/div>
++                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">??揶쎛??놁쁽 ??/div>
++                      <div className="text-3xl font-black text-[#202124] dark:text-white mt-2">{allUsers.length} 筌?/div>
+                     </div>
+                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-6 rounded-2xl">
+-                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">媛??硫붿씪 珥??몃옒??/div>
+-                      <div className="text-3xl font-black text-[#202124] dark:text-white mt-2">{emails.length} ??/div>
++                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">揶쎛??筌롫뗄?????紐껋삋??/div>
++                      <div className="text-3xl font-black text-[#202124] dark:text-white mt-2">{emails.length} ??/div>
+                     </div>
+                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-6 rounded-2xl">
+-                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">?쇳룊洹??묓릟 ?댄뻾瑜?/div>
++                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">??노즸域??臾볥쬉 ??꾨뻬??/div>
+                       <div className="text-3xl font-black text-emerald-600 mt-2">84.6 %</div>
+                     </div>
+                   </div>
+                 </div>
+-              )}
++              ) : adminTab === 'settings' ? (
++                <div className="space-y-6">
++                  <div>
++                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">?온?귐딆쁽 ??띻펾??쇱젟</h1>
++                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">?온?귐딆쁽 ?④쑴?????쑬?甕곕뜇?뉒몴?癰궰野껋?釉?????됰뮸??덈뼄</p>
++                  </div>
++                  <form onSubmit={async (e) => {
++                    e.preventDefault();
++                    if (settingsNewPassword && settingsNewPassword !== settingsConfirmPassword) {
++                      triggerToast("??낆젾????쑬?甕곕뜇?뉐첎? ??뺤쨮 ??깊뒄??? ??녿뮸??덈뼄.", "??쑬?甕곕뜇????살첒");
++                      return;
++                    }
++                    if (settingsNewPassword.length > 0 && settingsNewPassword.length < 4) {
++                      triggerToast("??쑬?甕곕뜇???4?癒?봺 ??곴맒??곷선????몃빍??", "??쑬?甕곕뜇????살첒");
++                      return;
++                    }
++                    const updated = await updateUserProfile(currentUser.virtualEmail, currentUser.deliveryTime || '09:00', currentUser.name, settingsNewPassword || undefined);
++                    if (updated) {
++                      setCurrentUser(updated);
++                      triggerToast("??띻펾??쇱젟???源껊궗?怨몄몵嚥????貫由??됰뮸??덈뼄.", "?????袁⑥┷");
++                      setSettingsNewPassword('');
++                      setSettingsConfirmPassword('');
++                    } else {
++                      triggerToast("??쇱젟 ???關肉???쎈솭??됰뮸??덈뼄.");
++                    }
++                  }} className="space-y-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-6 rounded-2xl max-w-xl">
++                    
++                    <div className="space-y-1.5">
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">????쑬?甕곕뜇??/label>
++                      <input
++                        type="password"
++                        value={settingsNewPassword}
++                        onChange={(e) => setSettingsNewPassword(e.target.value)}
++                        placeholder="癰궰野껋?釉?????쑬?甕곕뜇??
++                        className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
++                      />
++                    </div>
++                    <div className="space-y-1.5">
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">????쑬?甕곕뜇???類ㅼ뵥</label>
++                      <input
++                        type="password"
++                        value={settingsConfirmPassword}
++                        onChange={(e) => setSettingsConfirmPassword(e.target.value)}
++                        placeholder="????쑬?甕곕뜇????쇰뻻 ??낆젾"
++                        className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
++                      />
++                    </div>
++                    
++                    <button
++                      type="submit"
++                      className="px-6 py-2.5 bg-[#202124] hover:bg-slate-800 text-white font-bold rounded-full text-xs transition-all shadow-sm"
++                    >
++                      癰궰野???곸뒠 ????                    </button>
++                  </form>
++                </div>
++              ) : adminTab === 'scheduled-compose' ? (
++                <div className="space-y-6">
++                  <div>
++                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">沃섎챷????됰튋 ??쇱젟</h1>
++                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">?諭???醫??癒?쓺 ?類λ퉸筌??醫롮??? ??볦퍢??沃섎챷?????됰튋 獄쏆뮇???????됰뮸??덈뼄.</p>
++                  </div>
++                  
++                  <form onSubmit={handleScheduledEmailCreate} className="space-y-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-6 rounded-2xl">
++                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
++                      <div className="space-y-1.5">
++                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??뤿뻿??揶쎛????李??/label>
++                        <select
++                          value={scheduledTo}
++                          onChange={(e) => setScheduledTo(e.target.value)}
++                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
++                          required
++                        >
++                          <option value="">獄쏆뮇???????醫? ?醫뤾문</option>
++                          {allUsers.filter(u => u.role !== 'admin').map(u => (
++                            <option key={u.id} value={u.virtualEmail}>{u.name} ({u.virtualEmail})</option>
++                          ))}
++                        </select>
++                      </div>
++                      <div className="grid grid-cols-2 gap-2">
++                        <div className="space-y-1.5">
++                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??됰튋 ?醫롮?</label>
++                          <input
++                            type="date"
++                            value={scheduledDate}
++                            onChange={(e) => setScheduledDate(e.target.value)}
++                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
++                            required
++                          />
++                        </div>
++                        <div className="space-y-1.5">
++                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??됰튋 ??볦퍢</label>
++                          <input
++                            type="time"
++                            value={scheduledTime}
++                            onChange={(e) => setScheduledTime(e.target.value)}
++                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
++                            required
++                          />
++                        </div>
++                      </div>
++                    </div>
++                    
++                    <div className="space-y-1.5">
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">??뺛걠</label>
++                      <input
++                        type="text"
++                        value={scheduledSubject}
++                        onChange={(e) => setScheduledSubject(e.target.value)}
++                        placeholder="??李????뺛걠????낆젾??뤾쉭??
++                        className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
++                        required
++                      />
++                    </div>
++                    
++                    <div className="space-y-1.5">
++                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">癰귣챶揆 ??곸뒠</label>
++                      <textarea
++                        value={scheduledBody}
++                        onChange={(e) => setScheduledBody(e.target.value)}
++                        placeholder="癰귣챶揆 ??곸뒠???癒??嚥?苡??臾믨쉐??뤾쉭??.."
++                        className="w-full h-32 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
++                        required
++                      />
++                    </div>
++
++                    <div className="flex justify-end">
++                      <button
++                        type="submit"
++                        className="px-6 py-2 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white border border-slate-300 dark:border-slate-700 font-bold rounded-full text-xs transition-all shadow-none flex items-center gap-1.5"
++                      >
++                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
++                        </svg>
++                        <span>沃섎챷????됰튋 ?源낆쨯</span>
++                      </button>
++                    </div>
++                  </form>
++                </div>
++              ) : adminTab === 'scheduled-manage' ? (
++                <div className="space-y-6">
++                  <div>
++                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">??됰튋 沃섎챷???온??/h1>
++                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">??됰튋 獄쏆뮇????疫?餓λ쵐??沃섎챷??筌뤴뫖以???類ㅼ뵥??랁??띯뫁???????됰뮸??덈뼄.</p>
++                  </div>
++                  <div className="bg-white dark:bg-slate-900 shadow-none border-t border-slate-100 dark:border-slate-800">
++                    <table className="w-full text-left border-collapse text-[14px]">
++                      <thead>
++                        <tr className="bg-white dark:bg-slate-900 text-[#5f6368] dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-normal text-[13px] h-10">
++                          <th className="px-4 py-2 font-normal w-12 text-center whitespace-nowrap">
++                            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-slate-500" disabled />
++                          </th>
++                          <th className="px-2 py-2 font-normal whitespace-nowrap">??뤿뻿??/th>
++                          <th className="px-2 py-2 font-normal whitespace-nowrap">??뺛걠</th>
++                          <th className="px-2 py-2 font-normal whitespace-nowrap">獄쏆뮇????깅뻻</th>
++                          <th className="px-2 py-2 font-normal whitespace-nowrap">?怨밴묶</th>
++                          <th className="px-4 py-2 font-normal text-right whitespace-nowrap">?온??/th>
++                        </tr>
++                      </thead>
++                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
++                        {scheduledEmails.length === 0 ? (
++                          <tr><td colSpan={6} className="h-10 text-center text-slate-400 text-[14px]">??됰튋 獄쏆뮇????곷열????곷뮸??덈뼄.</td></tr>
++                        ) : (
++                          scheduledEmails.map((email) => (
++                            <tr key={email.id} className="h-10 hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] hover:z-10 relative cursor-default transition-all border-b border-[#f1f3f4] dark:border-slate-800 bg-white hover:bg-white dark:bg-slate-900 text-[#202124] dark:text-slate-200">
++                              <td className="px-4 py-0 text-center w-12 whitespace-nowrap">
++                                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-slate-500" disabled />
++                              </td>
++                              <td className="px-2 py-0 font-bold whitespace-nowrap">{email.receiverName} <span className="text-xs font-light text-slate-500">({email.receiverVirtualEmail})</span></td>
++                              <td className="px-2 py-0 truncate whitespace-nowrap">{email.subject}</td>
++                              <td className="px-2 py-0 whitespace-nowrap">{new Date(email.scheduledAt).toLocaleString()}</td>
++                              <td className="px-2 py-0 whitespace-nowrap">
++                                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${email.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
++                                  {email.status === 'pending' ? '??疫꿸퀣夷? : '獄쏆뮇??袁⑥┷'}
++                                </span>
++                              </td>
++                              <td className="px-4 py-0 text-right whitespace-nowrap">
++                                {email.status === 'pending' && (
++                                  <button
++                                    onClick={() => handleScheduledEmailCancel(email.id)}
++                                    className="px-2 py-1 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-bold rounded-md text-[12px] transition-all"
++                                  >
++                                    ?띯뫁??+                                  </button>
++                                )}
++                              </td>
++                            </tr>
++                          ))
++                        )}
++                      </tbody>
++                    </table>
++                  </div>
++                </div>
++              ) : null}
+             </main>
+           </div>
+         </div>
+       ) : (
+-        /* 2. 濡쒓렇???좎???硫붿씤 ??쒕낫??(Gmail 媛먯꽦 誘몃땲硫 Layout) */
++        /* 2. 嚥≪뮄????醫???筌롫뗄??????뺣궖??(Gmail 揶쏅Ŋ苑?沃섎챶?뀐쭖? Layout) */
+         <div className="flex-1 flex overflow-hidden h-screen pt-0 bg-[#F6F8FC] dark:bg-slate-950">
+           
+-          {/* A. 醫뚯륫 ?ъ씠?쒕컮 (?ъ씠???ㅻ퉬寃뚯씠?? */}
++          {/* A. ?ル슣瑜??????뺤뺍 (???????삵돩野껊슣??? */}
+           <aside className="w-64 bg-[#F6F8FC] dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-none flex flex-col justify-between shrink-0 p-3">
+             <div className="space-y-4">
+-              {/* 濡쒓퀬 ?곸뿭 - ?대┃ ???덉쑝濡??대룞 */}
++              {/* 嚥≪뮄???怨몃열 - ????????됱몵嚥???猷?*/}
+               <button
+-                onClick={() => { handleLogout(); setAuthMode('home'); }}
++                onClick={() => { setUserTab('inbox'); }}
+                 className="flex items-center space-x-2.5 px-3 py-4 hover:opacity-75 transition-opacity cursor-pointer w-full text-left"
+               >
+                 <span className="w-7 h-7 bg-[#202124] dark:bg-slate-800 rounded-lg flex items-center justify-center text-white text-sm font-black shadow-sm">5</span>
+                 <span className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">StopFive</span>
+-                <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-[8px] font-bold rounded border border-slate-200 dark:border-slate-800">濡쒖뺄 DB</span>
++                <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-[8px] font-bold rounded border border-slate-200 dark:border-slate-800">嚥≪뮇類?DB</span>
+               </button>
+ 
+-              {/* Compose ?좉퇋 硫붿씪 ?곌린 踰꾪듉 (吏硫붿씪 ?ㅽ???- ?됱긽 諛곗젣 諛?????蹂대뜑?? */}
+-              <div className="px-1.5">
++              {/* Compose ?醫됲뇣 筌롫뗄???怨뚮┛ 甕곌쑵??(筌왖筌롫뗄???????- ??깃맒 獄쏄퀣??獄???????癰귣???? */}
++              <div className="px-1.5 mt-2 mb-2">
+                 <button
+                   onClick={() => { setSelectedEmail(null); setUserTab('compose'); }}
+-                  className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-sm text-[#202124] dark:text-white font-bold rounded-full text-xs transition-all flex items-center justify-center space-x-2 shadow-sm"
++                  className="ml-3 pl-3 pr-6 py-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#202124] dark:text-white text-[14px] font-medium rounded-2xl transition-all shadow-[0_1px_3px_rgba(0,0,0,0.1)] border border-slate-200 dark:border-slate-700 flex items-center gap-3 w-fit"
+                 >
+-                  <svg className="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
++                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                   </svg>
+-                  <span>?몄??곌린</span>
++                  <span>?紐??怨뚮┛</span>
+                 </button>
+               </div>
+ 
+-              {/* ?ㅻ퉬寃뚯씠??硫붾돱 (?묐갚 ?꾩씠肄?諛?100% ?쒓? 紐낆묶 ?듭씪) */}
+-              <nav className="space-y-1 px-1.5">
++              {/* ??삵돩野껊슣???筌롫뗀??(?臾먭컶 ?袁⑹뵠??獄?100% ??? 筌뤿굞臾????뵬) */}
++              <nav className="space-y-0 px-1.5">
+                 <button
+                   onClick={() => { setUserTab('inbox'); setSelectedEmail(null); }}
+-                  className={`w-full flex items-center justify-between px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
++                  className={`w-full flex items-center justify-between px-6 h-8 rounded-full text-[14px] transition-all ${
+                     userTab === 'inbox' 
+-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                   }`}
+                 >
+                   <div className="flex items-center space-x-3">
+                     <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0V9a2 2 0 00-2-2H6a2 2 0 00-2 2v4m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2" />
+                     </svg>
+-                    <span>諛쏆??몄???/span>
++                    <span>獄쏆룇??紐???/span>
+                   </div>
+                   {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived').length > 0 && (
+                     <span className="text-[#202124] dark:text-white text-xs font-bold px-1">
+@@ -869,99 +1424,99 @@ export default function Home() {
+ 
+                 <button
+                   onClick={() => { setUserTab('archive'); setSelectedEmail(null); }}
+-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
+                     userTab === 'archive' 
+-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                   }`}
+                 >
+                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                   </svg>
+-                  <span>蹂닿???/span>
++                  <span>??뤿뻿癰귣떯???/span>
+                 </button>
+ 
+                 <button
+                   onClick={() => { setUserTab('sent'); setSelectedEmail(null); }}
+-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
+                     userTab === 'sent' 
+-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                   }`}
+                 >
+                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                   </svg>
+-                  <span>蹂대궦?몄???/span>
++                  <span>癰귣?沅?紐???/span>
+                 </button>
+ 
+                 <button
+                   onClick={() => { setUserTab('statistics'); setSelectedEmail(null); }}
+-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
+                     userTab === 'statistics' 
+-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                   }`}
+                 >
+                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+                   </svg>
+-                  <span>?듦퀎 由ы룷??/span>
++                  <span>?????귐뗫７??/span>
+                 </button>
+ 
+                 <button
+                   onClick={() => { setUserTab('settings'); setSelectedEmail(null); }}
+-                  className={`w-full flex items-center px-6 py-2.5 rounded-full text-xs font-bold transition-all ${
++                  className={`w-full flex items-center px-6 h-8 rounded-full text-[14px] transition-all ${
+                     userTab === 'settings' 
+-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350'
++                      ? 'bg-[#d3e3fd] text-[#041e49] dark:bg-[#004a77] dark:text-white font-bold' 
++                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                   }`}
+                 >
+                   <svg className="w-4 h-4 text-slate-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                   </svg>
+-                  <span>?섍꼍 ?ㅼ젙</span>
++                  <span>??띻펾 ??쇱젟</span>
+                 </button>
+               </nav>
+             </div>
+ 
+-            {/* ?ъ씠?쒕컮 理쒗븯?? 泥댄뿕 媛?대뱶 紐⑤떖 ?몃━嫄?諛?移섑듃 ?쒖뼱 由ъ뀑 踰꾪듉 (紐⑤끂?щ＼??諛?100% ?쒓??? */}
++            {/* ?????뺤뺍 筌ㅼ뮉釉?? 筌ｋ똾肉?揶쎛??諭?筌뤴뫀???紐꺿봺椰?獄?燁살꼹????뽯선 ?귐딅?甕곌쑵??(筌뤴뫀???竊??獄?100% ????? */}
+             <div className="space-y-2 p-1.5 pb-4">
+               <button 
+                 onClick={() => setIsCourseGuideOpen(true)}
+                 className="w-full py-2 bg-white dark:bg-slate-900 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-full text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-800 shadow-sm"
+               >
+-                <span>泥댄뿕 肄붿뒪 媛?대뱶</span>
++                <span>筌ｋ똾肉??꾨뗄??揶쎛??諭?/span>
+               </button>
+ 
+               <div className="text-[9px] text-slate-400 px-3 py-1 space-y-0.5">
+-                <div>濡쒓렇??怨꾩젙:</div>
++                <div>嚥≪뮄????④쑴??</div>
+                 <div className="text-[#1f1f1f] dark:text-white truncate font-semibold">{currentUser.name}</div>
+                 <div className="truncate text-slate-450 font-light">{currentUser.virtualEmail}</div>
+               </div>
+ 
+-              {/* 媛뺤젣 由ъ뀑 ?????먯꽑 踰꾪듉 */}
++              {/* 揶쏅벡???귐딅????????癒?퐨 甕곌쑵??*/}
+               <button
+                 onClick={async () => {
+                   const updated = await resetExperienceCourse(currentUser.virtualEmail);
+                   if (updated) {
+                     setCurrentUser(updated);
+                     setEmails(await getLocalEmails(currentUser.virtualEmail));
+-                    triggerToast("5??泥댄뿕 肄붿뒪媛 珥덇린?붾릺?덉뒿?덈떎.", "肄붿뒪 由ъ뀑 ?꾨즺");
++                    triggerToast("5??筌ｋ똾肉??꾨뗄?ゅ첎? ?λ뜃由?遺얜┷??됰뮸??덈뼄.", "?꾨뗄???귐딅??袁⑥┷");
+                   }
+                 }}
+                 className="w-full py-1.5 border border-dashed border-slate-300 dark:border-slate-800 hover:border-amber-500 hover:text-amber-500 text-slate-400 rounded-full text-[9px] font-semibold transition-all text-center"
+               >
+-                ??泥댄뿕 肄붿뒪 由ъ뀑 (媛쒕컻?먯슜)
++                ??筌ｋ똾肉??꾨뗄???귐딅?(揶쏆뮆而?癒?뒠)
+               </button>
+             </div>
+           </aside>
+ 
+-          {/* B. 硫붿씤 而⑦뀗痢??곸뿭 (?멸낸 ?쇱씤 諛?留덉쭊 ?꾨㈃ ?뚭굅?섏뿬 ?됰㈃ 吏硫붿씪 ?덉씠?꾩썐 援ы쁽) */}
++          {/* B. 筌롫뗄???뚢뫂?쀯㎘??怨몃열 (?硫몃궦 ??깆뵥 獄?筌띾뜆彛??袁ⓦ늺 ???탢??뤿연 ??겹늺 筌왖筌롫뗄????됱뵠?袁⑹뜍 ?닌뗭겱) */}
+           <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 border-none rounded-none m-0 shadow-none">
+             
+-            {/* ?곷떒 ?묐컮 ?ㅻ뜑 */}
++            {/* ?怨룸뼊 ?臾먯뺍 ??삳쐭 */}
+             <header className="h-14 px-6 flex items-center justify-between shrink-0 bg-transparent border-b border-slate-100 dark:border-slate-800">
+               <div className="flex items-center space-x-2">
+                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mailbox</span>
+@@ -970,12 +1525,12 @@ export default function Home() {
+               </div>
+               
+               <div className="flex items-center space-x-4">
+-                {/* ?ㅻ뜑 泥댄뿕 肄붿뒪 媛?대뱶 ?몃━嫄?(吏硫붿씪 ?ㅽ???Monochrome 踰꾪듉) */}
++                {/* ??삳쐭 筌ｋ똾肉??꾨뗄??揶쎛??諭??紐꺿봺椰?(筌왖筌롫뗄???????Monochrome 甕곌쑵?? */}
+                 <button
+                   onClick={() => setIsCourseGuideOpen(true)}
+                   className="px-3 py-1.5 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white text-xs font-bold rounded-full border border-slate-300 dark:border-slate-700 transition-all flex items-center gap-1.5 shadow-none"
+                 >
+-                  <span>媛?대뱶 ?앹뾽</span>
++                  <span>揶쎛??諭???밸씜</span>
+                   <span className="w-3.5 h-3.5 bg-slate-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">?</span>
+                 </button>
+ 
+@@ -990,36 +1545,35 @@ export default function Home() {
+               </div>
+             </header>
+ 
+-            {/* 硫붿씤 ??酉곗뼱 */}
+-            <main className="flex-1 flex flex-col overflow-hidden">
++            {/* 筌롫뗄?????됯퀣堉?*/}
++            <main className="flex-1 flex flex-col overflow-hidden w-full bg-white dark:bg-slate-900 px-4 lg:px-8 py-4">
+               {selectedEmail ? (
+-                /* 硫붿씪 ?곸꽭 ?쎄린 ?붾㈃ (吏硫붿씪怨??꾩쟾???숈씪??UI 媛먯꽦, ?좊챸??怨좊?鍮???댄룷洹몃옒?? */
+-                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
++                /* 筌롫뗄???怨멸쉭 ??꾨┛ ?遺얇늺 (筌왖筌롫뗄?ゆ??袁⑹읈????덉뵬??UI 揶쏅Ŋ苑? ?醫딆구???⑥쥓???????꾨７域밸챶??? */
++                <div className="flex-1 flex flex-col overflow-hidden">
+                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
+                     <button 
+                       onClick={() => setSelectedEmail(null)}
+                       className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
+                     >
+-                      <span>??Back to {userTab}</span>
++                      <span>??Back to {userTab}</span>
+                     </button>
+                   </div>
+ 
+                   <div className="flex-1 overflow-y-auto p-8 space-y-6">
+-                    {/* 硫붿씪 ?쒕ぉ ?곸뿭 */}
++                    {/* 筌롫뗄????뺛걠 ?怨몃열 */}
+                     <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
+                       <div className="flex items-center space-x-3">
+                         <h2 className="text-2xl font-bold tracking-tight text-[#202124] dark:text-white leading-tight">
+                           {selectedEmail.subject}
+                         </h2>
+                         <span className="px-2 py-0.5 bg-[#f1f3f4] dark:bg-slate-800 text-[#5f6368] dark:text-slate-450 text-[10px] font-medium rounded border border-slate-200 dark:border-slate-700">
+-                          諛쏆??몄???-                        </span>
++                          獄쏆룇??紐???                        </span>
+                       </div>
+                       
+-                      {/* 硫붿씪 ?≪닔?좎씤 ?꾨컮? 諛??ㅻ뜑 ?뺣낫 */}
++                      {/* 筌롫뗄????る땾?醫롮뵥 ?袁⑥뺍?? 獄???삳쐭 ?類ｋ궖 */}
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center space-x-3">
+-                          {/* 吏硫붿씪 ?먰삎 ?꾨컮? */}
++                          {/* 筌왖筌롫뗄???癒곗굨 ?袁⑥뺍?? */}
+                           <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                             {selectedEmail.sender === 'team@stopfive.com' ? 'S' : (selectedEmail.sender[0] || 'U').toUpperCase()}
+                           </div>
+@@ -1030,7 +1584,7 @@ export default function Home() {
+                             </div>
+                             <div className="text-[11px] text-slate-400">
+                               <span>To: </span>
+-                              <span className="font-medium text-slate-650 dark:text-slate-350">?섏뿉寃?/span>
++                              <span className="font-medium text-slate-650 dark:text-slate-350">??뤿퓠野?/span>
+                             </div>
+                           </div>
+                         </div>
+@@ -1047,28 +1601,28 @@ export default function Home() {
+                       </div>
+                     </div>
+ 
+-                    {/* 蹂몃Ц ?곸뿭 - ?ш쾶 ?ㅼ슦怨??좊챸?섍쾶 蹂寃?*/}
++                    {/* 癰귣챶揆 ?怨몃열 - ??苡???쇱뒭???醫딆구??띿쓺 癰궰野?*/}
+                     <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-[#202124] dark:text-slate-100 font-normal">
+                       {selectedEmail.body}
+                     </div>
+ 
+-                    {/* 誘몃떟??誘몄뀡 硫붿씪??寃쎌슦 ????듭옣李??쒓났 */}
+-                    {selectedEmail.receiver === currentUser.virtualEmail && selectedEmail.status !== 'archived' && (
++                    {/* 沃섎챶???沃섎챷??筌롫뗄???野껋럩?????????삢筌???볥궗 */}
++                    {selectedEmail.receiver === currentUser.virtualEmail && !selectedEmail.replyContent && (
+                       <form onSubmit={handleSendReply} className="border-t border-slate-100 dark:border-slate-850 pt-6 space-y-4">
+                         <div className="space-y-2">
+                           <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
+-                            REPLY BOX (?ш린???ㅻ뒛??誘몄뀡 ?섑뻾 ?듭옣???낅젰?섏꽭??
++                            REPLY BOX (??由????삳뮎??沃섎챷????묐뻬 ???삢????낆젾??뤾쉭??
+                           </label>
+                           <textarea
+                             value={replyText}
+                             onChange={(e) => setReplyText(e.target.value)}
+-                            placeholder="誘몄뀡???꾨즺?덈떎硫?吏㏃? ?듭옣???낅젰?섍퀬 Send瑜??뚮윭二쇱꽭?? (?? ?꾨즺?덉뒿?덈떎! / 湲곗?媛?耳쒕땲 ?꾩＜ 媛쒖슫?⑸땲??)"
++                            placeholder="沃섎챷????袁⑥┷??덈뼄筌?筌욁룂? ???삢????낆젾??랁?Send?????쑎雅뚯눘苑?? (?? ?袁⑥┷??됰뮸??덈뼄! / 疫꿸퀣?揶??녹뮆???袁⑼폒 揶쏆뮇???몃빍??)"
+                             className="w-full h-32 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-450 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
+                             required
+                           />
+                         </div>
+                         <div className="flex justify-start">
+-                          {/* 吏硫붿씪 怨좎쑀 ?뚮몢由??κ렐 ?뚯깋 ?듭옣 踰꾪듉 */}
++                          {/* 筌왖筌롫뗄???⑥쥙? ???あ???觀?????퉳 ???삢 甕곌쑵??*/}
+                           <button
+                             type="submit"
+                             className="px-6 py-2 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white border border-slate-300 dark:border-slate-700 font-bold rounded-full text-xs transition-all shadow-none flex items-center gap-1.5"
+@@ -1076,16 +1630,16 @@ export default function Home() {
+                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                             </svg>
+-                            <span>?듭옣</span>
++                            <span>???삢</span>
+                           </button>
+                         </div>
+                       </form>
+                     )}
+ 
+-                    {/* ?대? ?듭옣 ?꾨즺??硫붿씪??寃쎌슦 ????덉뒪?좊━ ?쒓린 */}
++                    {/* ??? ???삢 ?袁⑥┷??筌롫뗄???野껋럩????????됰뮞?醫듼봺 ??볥┛ */}
+                     {selectedEmail.status === 'archived' && selectedEmail.replyContent && (
+                       <div className="bg-[#f8f9fa] dark:bg-slate-850/30 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl space-y-3">
+-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Your Reply (蹂대궦 ?듭옣)</div>
++                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Your Reply (癰귣?沅????삢)</div>
+                         <div className="text-[14px] leading-relaxed text-[#202124] dark:text-slate-300">
+                           {selectedEmail.replyContent}
+                         </div>
+@@ -1097,29 +1651,28 @@ export default function Home() {
+                   </div>
+                 </div>
+               ) : userTab === 'statistics' ? (
+-                /* ?듦퀎 ?붾㈃ (泥댄뿕 肄붿뒪 吏꾪뻾 由ы룷???꾩젽 ?묒옱) */
++                /* ?????遺얇늺 (筌ｋ똾肉??꾨뗄??筌욊쑵六??귐뗫７???袁⑹졐 ?臾믪삺) */
+                 <div className="flex-1 overflow-y-auto p-8 space-y-8 max-w-4xl mx-auto w-full">
+                   <div>
+                     <h1 className="text-2xl font-bold tracking-tight">Statistics & Reports</h1>
+-                    <p className="text-sm text-slate-400 mt-1">泥댄뿕 肄붿뒪 吏꾪뻾?꾩? ?쇱씪 ?쎌냽 ?좎? ?깃낵 吏?쒖엯?덈떎.</p>
++                    <p className="text-sm text-slate-400 mt-1">筌ｋ똾肉??꾨뗄??筌욊쑵六?袁? ??깆뵬 ??뚮꺗 ?醫? ?源껊궢 筌왖??뽰뿯??덈뼄.</p>
+                   </div>
+ 
+-                  {/* 3??5??泥댄뿕 肄붿뒪 吏꾪뻾 ?꾩젽 ?댁떇 ?곸뿭 (?듦퀎 理쒖긽??諛곗튂) */}
++                  {/* 3??5??筌ｋ똾肉??꾨뗄??筌욊쑵六??袁⑹졐 ??곷뻼 ?怨몃열 (????筌ㅼ뮇湲??獄쏄퀣?? */}
+                   <div className="bg-slate-50 dark:bg-slate-800/40 border border-border rounded-2xl p-6 space-y-6">
+                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                       <div className="space-y-1">
+                         <div className="flex items-center gap-2">
+                           <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950 text-[10px] font-bold text-primary rounded border border-blue-200 dark:border-blue-900">
+-                            泥댄뿕 肄붿뒪 ?④퀎
++                            筌ｋ똾肉??꾨뗄????ｍ?                           </span>
+                           <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+-                            3??5???꾩꽦 肄붿뒪 濡쒕뱶留?-                          </span>
++                            3??5???袁⑷쉐 ?꾨뗄??嚥≪뮆諭띰쭕?                          </span>
+                         </div>
+-                        <p className="text-xs text-slate-400">?몃컯???댄깉???곕Ⅸ ?ㅼ떆媛?吏꾨룄 由ы룷??/p>
++                        <p className="text-xs text-slate-400">?紐껋뺏????꾧퉱???怨뺚뀲 ??쇰뻻揶?筌욊쑬猷??귐뗫７??/p>
+                       </div>
+ 
+-                      {/* 移섑듃???④퀎 ?쒖뼱 ?⑥텛 */}
++                      {/* 燁살꼹?????ｍ???뽯선 ??ν뀤 */}
+                       <div className="flex gap-2 w-full sm:w-auto justify-end">
+                         {((currentUser.courseStep === 1) || (currentUser.courseStep === 3)) && (
+                           <button
+@@ -1127,12 +1680,12 @@ export default function Home() {
+                               const mission = await getNextCourseMission(currentUser.virtualEmail);
+                               if (mission) {
+                                 setEmails(await getLocalEmails(currentUser.virtualEmail));
+-                                triggerToast("泥댄뿕 肄붿뒪 ?ㅼ쓬 誘몄뀡 ?꾩갑!", "??硫붿씪 ?뺤씤");
++                                triggerToast("筌ｋ똾肉??꾨뗄????쇱벉 沃섎챷???袁⑷컩!", "??筌롫뗄???類ㅼ뵥");
+                               }
+                             }}
+                             className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-primary border border-blue-200 dark:border-blue-900 text-[11px] font-bold rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
+                           >
+-                            ?ㅼ쓬 誘몄뀡 利됱떆 諛쏄린 (移섑듃)
++                            ??쇱벉 沃섎챷??筌앸맩??獄쏆룄由?(燁살꼹??
+                           </button>
+                         )}
+ 
+@@ -1145,33 +1698,33 @@ export default function Home() {
+                                 const nextMission = await getNextCourseMission(updated.virtualEmail);
+                                 if (nextMission) {
+                                   setEmails(await getLocalEmails(updated.virtualEmail));
+-                                  triggerToast("媛?곸쑝濡??섎（媛 寃쎄낵?섏뿬 ?ㅼ쓬 ?좎쭨 誘몄뀡???꾩넚?섏뿀?듬땲??", "?섎（ 吏?섍린 ?꾨즺");
++                                  triggerToast("揶쎛?怨몄몵嚥???롳펷揶쎛 野껋럡???뤿연 ??쇱벉 ?醫롮? 沃섎챷????袁⑸꽊??뤿???щ빍??", "??롳펷 筌왖??띾┛ ?袁⑥┷");
+                                 }
+                               }
+                             }}
+                             className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 text-[11px] font-bold rounded-lg hover:bg-amber-500 hover:text-white transition-all flex items-center gap-1 shadow-sm"
+                           >
+-                            <span>?쒕??덉씠?? ?섎（ 吏?섍린 (移섑듃)</span>
++                            <span>?????됱뵠?? ??롳펷 筌왖??띾┛ (燁살꼹??</span>
+                           </button>
+                         )}
+                       </div>
+                     </div>
+ 
+-                    {/* 濡쒕뱶留?5?④퀎 諛?*/}
++                    {/* 嚥≪뮆諭띰쭕?5??ｍ?獄?*/}
+                     <div className="space-y-3">
+                       <div className="flex justify-between text-[11px] text-slate-500 font-medium">
+-                        <span>Day 1 (1~2??</span>
+-                        <span>Day 2 (3~4??</span>
+-                        <span>Day 3 (理쒖쥌 5??</span>
++                        <span>Day 1 (1~2??</span>
++                        <span>Day 2 (3~4??</span>
++                        <span>Day 3 (筌ㅼ뮇伊?5??</span>
+                       </div>
+                       
+                       <div className="grid grid-cols-5 gap-2.5">
+                         {[1, 2, 3, 4, 5].map((stepNum) => {
+                           const isActive = currentUser.courseStep >= stepNum;
+-                          let stepLabel = `${stepNum}?뚯감`;
+-                          if (stepNum === 1) stepLabel = '1?뚯감(Day 1)';
+-                          if (stepNum === 3) stepLabel = '3?뚯감(Day 2)';
+-                          if (stepNum === 5) stepLabel = '5?뚯감(Day 3)';
++                          let stepLabel = `${stepNum}???컧`;
++                          if (stepNum === 1) stepLabel = '1???컧(Day 1)';
++                          if (stepNum === 3) stepLabel = '3???컧(Day 2)';
++                          if (stepNum === 5) stepLabel = '5???컧(Day 3)';
+                           
+                           return (
+                             <div key={stepNum} className="space-y-1.5">
+@@ -1189,30 +1742,30 @@ export default function Home() {
+                       </div>
+                     </div>
+ 
+-                    {/* ?꾩＜ ?몃줈??異쒕젰 */}
++                    {/* ?袁⑼폒 ?紐껋쨮???곗뮆??*/}
+                     {currentUser.courseStatus === 'completed' && (
+                       <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-200 dark:border-emerald-900/30 rounded-2xl p-5 text-center space-y-3">
+                         <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto text-lg">
+-                          ?룇
++                          ?猷?                         </div>
+                         <div className="space-y-0.5">
+-                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">5???됰룞 泥댄뿕 肄붿뒪 ?꾩＜瑜?異뺥븯?⑸땲??</h3>
++                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">5????곕짗 筌ｋ똾肉??꾨뗄???袁⑼폒???곕벤釉??몃빍??</h3>
+                           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+-                            3???숈븞 袁몄????묓릟 硫붿씪濡?珥?5踰덉쓽 留덉씠?щ줈 ?됰룞???꾩닔?섏뀲?듬땲??
++                            3????덈툧 熬곷챷????臾볥쬉 筌롫뗄?ゆ에???5甕곕뜆??筌띾뜆???以???곕짗???袁⑸땾??뤿??щ빍??
+                           </p>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+ 
+-                  {/* ?뺣웾 ?듦퀎 移대뱶 洹몃━??*/}
++                  {/* ?類ｌ쎗 ????燁삳?諭?域밸챶???*/}
+                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                     <div className="bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl">
+                       <span className="text-xs text-slate-400 font-semibold block uppercase">Appointments kept</span>
+                       <span className="text-3xl font-bold text-slate-850 dark:text-slate-100 block mt-2">
+                         {stats?.appointmentsKept}
+                       </span>
+-                      <span className="text-xs text-slate-400 block mt-1">?꾩쟻 吏???쎌냽</span>
++                      <span className="text-xs text-slate-400 block mt-1">?袁⑹읅 筌왖????뚮꺗</span>
+                     </div>
+ 
+                     <div className="bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl">
+@@ -1220,7 +1773,7 @@ export default function Home() {
+                       <span className="text-3xl font-bold text-slate-850 dark:text-slate-100 block mt-2">
+                         {stats?.responseConsistency}%
+                       </span>
+-                      <span className="text-xs text-slate-400 block mt-1">理쒓렐 7???묐떟 ?쇨???/span>
++                      <span className="text-xs text-slate-400 block mt-1">筌ㅼ뮄??7???臾먮뼗 ?????/span>
+                     </div>
+ 
+                     <div className="bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl">
+@@ -1228,7 +1781,7 @@ export default function Home() {
+                       <span className="text-3xl font-bold text-slate-850 dark:text-slate-100 block mt-2">
+                         {stats?.averageResponseTime}
+                       </span>
+-                      <span className="text-xs text-slate-400 block mt-1">誘몄뀡 ?섏떊 ???됯퇏 ?됰룞 ?뚯슂</span>
++                      <span className="text-xs text-slate-400 block mt-1">沃섎챷????뤿뻿 ?????뇧 ??곕짗 ???뒄</span>
+                     </div>
+ 
+                     <div className="bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl">
+@@ -1236,11 +1789,11 @@ export default function Home() {
+                       <span className="text-3xl font-bold text-primary block mt-2">
+                         Day {stats?.currentChain}
+                       </span>
+-                      <span className="text-xs text-slate-400 block mt-1">?곗냽 ?쎌냽 ?좎? ?쇱옄</span>
++                      <span className="text-xs text-slate-400 block mt-1">?怨쀫꺗 ??뚮꺗 ?醫? ??깆쁽</span>
+                     </div>
+                   </div>
+ 
+-                  {/* 14??罹섎┛???덉뒪?좊━ */}
++                  {/* 14??筌?꼶?????됰뮞?醫듼봺 */}
+                   <div className="bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl">
+                     <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Inbox History (Recent 14 Days)</h3>
+                     <div className="grid grid-cols-7 sm:grid-cols-14 gap-3">
+@@ -1273,31 +1826,31 @@ export default function Home() {
+                   </div>
+                 </div>
+               ) : userTab === 'compose' ? (
+-                /* ?몄??곌린 ?붾㈃ - ?대찓???곸꽭 蹂닿린? ?숈씪???ㅻ뜑 ?щ㎎, 蹂몃Ц ?놁씠 諛붾줈 REPLY BOX */
++                /* ?紐??怨뚮┛ ?遺얇늺 - ??李???怨멸쉭 癰귣떯由?? ??덉뵬????삳쐭 ???? 癰귣챶揆 ??곸뵠 獄쏅뗀以?REPLY BOX */
+                 <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
+-                  {/* ?대찓???곸꽭 蹂닿린? ?숈씪???곷떒 Back 諛?*/}
++                  {/* ??李???怨멸쉭 癰귣떯由?? ??덉뵬???怨룸뼊 Back 獄?*/}
+                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
+                     <button
+                       onClick={() => setUserTab('inbox')}
+                       className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
+                     >
+-                      <span>??Back to inbox</span>
++                      <span>??Back to inbox</span>
+                     </button>
+                   </div>
+ 
+                   <div className="flex-1 overflow-y-auto p-8 space-y-6">
+-                    {/* ?대찓???곸꽭 蹂닿린? ?숈씪???쒕ぉ ?곸뿭 */}
++                    {/* ??李???怨멸쉭 癰귣떯由?? ??덉뵬????뺛걠 ?怨몃열 */}
+                     <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
+                       <div className="flex items-center space-x-3">
+                         <h2 className="text-2xl font-bold tracking-tight text-[#202124] dark:text-white leading-tight">
+-                          ???몄? ?곌린
++                          ???紐? ?怨뚮┛
+                         </h2>
+                         <span className="px-2 py-0.5 bg-[#f1f3f4] dark:bg-slate-800 text-[#5f6368] dark:text-slate-450 text-[10px] font-medium rounded border border-slate-200 dark:border-slate-700">
+-                          ?몄??곌린
++                          ?紐??怨뚮┛
+                         </span>
+                       </div>
+ 
+-                      {/* ?대찓???곸꽭 蹂닿린? ?숈씪??諛쒖떊???ㅻ뜑 */}
++                      {/* ??李???怨멸쉭 癰귣떯由?? ??덉뵬??獄쏆뮇?????삳쐭 */}
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center space-x-3">
+                           <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+@@ -1327,16 +1880,16 @@ export default function Home() {
+                       </div>
+                     </div>
+ 
+-                    {/* 蹂몃Ц ?놁씠 諛붾줈 REPLY BOX (?대찓???곸꽭 蹂닿린??REPLY BOX? ?숈씪???ㅽ??? */}
++                    {/* 癰귣챶揆 ??곸뵠 獄쏅뗀以?REPLY BOX (??李???怨멸쉭 癰귣떯由??REPLY BOX?? ??덉뵬??????? */}
+                     <form onSubmit={(e) => { e.preventDefault(); handleSendCompose(e); }} className="space-y-4">
+                       <div className="space-y-2">
+                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
+-                          WRITE MESSAGE (?ш린??蹂대궡???댁슜???낅젰?섏꽭??
++                          WRITE MESSAGE (??由??癰귣?沅????곸뒠????낆젾??뤾쉭??
+                         </label>
+                         <textarea
+                           value={composeBody}
+                           onChange={(e) => setComposeBody(e.target.value)}
+-                          placeholder="誘몄뀡???꾨즺?덈떎硫?吏㏃? ?듭옣???낅젰?섍퀬 Send瑜??뚮윭二쇱꽭?? (?? ?꾨즺?덉뒿?덈떎! / 湲곗?媛?耳쒕땲 ?꾩＜ 媛쒖슫?⑸땲??)"
++                          placeholder="沃섎챷????袁⑥┷??덈뼄筌?筌욁룂? ???삢????낆젾??랁?Send?????쑎雅뚯눘苑?? (?? ?袁⑥┷??됰뮸??덈뼄! / 疫꿸퀣?揶??녹뮆???袁⑼폒 揶쏆뮇???몃빍??)"
+                           className="w-full h-32 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-450 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
+                           required
+                         />
+@@ -1346,25 +1899,25 @@ export default function Home() {
+                           type="submit"
+                           onClick={() => {
+                             setComposeTo('team@stopfive.com');
+-                            setComposeSubject('?ъ슜???몄? 臾몄쓽');
++                            setComposeSubject('??????紐? ?얜챷??);
+                           }}
+                           className="px-6 py-2 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white border border-slate-300 dark:border-slate-700 font-bold rounded-full text-xs transition-all shadow-none flex items-center gap-1.5"
+                         >
+                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                           </svg>
+-                          <span>?듭옣</span>
++                          <span>???삢</span>
+                         </button>
+                       </div>
+                     </form>
+                   </div>
+                 </div>
+               ) : userTab === 'settings' ? (
+-                /* ?ㅼ젙 ?붾㈃ */
++                /* ??쇱젟 ?遺얇늺 */
+                 <div className="flex-1 overflow-y-auto p-8 space-y-8 max-w-lg mx-auto w-full">
+                   <div>
+                     <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+-                    <p className="text-sm text-slate-400 mt-1">媛쒖씤 ?몄????섏떊 ?쒓컙 諛??꾨줈?꾩쓣 蹂寃쏀빀?덈떎.</p>
++                    <p className="text-sm text-slate-400 mt-1">揶쏆뮇???紐?????뤿뻿 ??볦퍢 獄??袁⑥쨮?袁⑹뱽 癰궰野껋?鍮??덈뼄.</p>
+                   </div>
+ 
+                   <form onSubmit={async (e) => {
+@@ -1374,7 +1927,7 @@ export default function Home() {
+                     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+ 
+                     if (settingsNewPassword && settingsNewPassword !== settingsConfirmPassword) {
+-                      triggerToast("Password change failed.", "??鍮꾨?踰덊샇媛 ?쇱튂?섏? ?딆뒿?덈떎.");
++                      triggerToast("Password change failed.", "????쑬?甕곕뜇?뉐첎? ??깊뒄??? ??녿뮸??덈뼄.");
+                       return;
+                     }
+                     
+@@ -1418,12 +1971,12 @@ export default function Home() {
+                         required
+                       />
+                       <span className="text-[10px] text-slate-400 block mt-1">
+-                        * 吏?뺥븳 ?쒓컙??留ㅼ씪 ?뺢린 ?듭빱 硫붿씪??媛???섏떊?⑥쑝濡?諛곕떖?⑸땲??
++                        * 筌왖?類λ립 ??볦퍢??筌띲끉???類?┛ ???묽 筌롫뗄???揶쎛????뤿뻿??μ몵嚥?獄쏄퀡???몃빍??
+                       </span>
+                     </div>
+ 
+                     <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-4">
+-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Change Password (鍮꾨?踰덊샇 蹂寃?</h3>
++                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Change Password (??쑬?甕곕뜇??癰궰野?</h3>
+                       
+                       <div className="space-y-1">
+                         <label className="text-xs font-bold text-slate-455 uppercase tracking-wider block">New Password</label>
+@@ -1431,7 +1984,7 @@ export default function Home() {
+                           type="password"
+                           value={settingsNewPassword}
+                           onChange={(e) => setSettingsNewPassword(e.target.value)}
+-                          placeholder="蹂寃쏀븷 ??鍮꾨?踰덊샇"
++                          placeholder="癰궰野껋?釉?????쑬?甕곕뜇??
+                           className="w-full p-3 border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm dark:bg-slate-800"
+                         />
+                       </div>
+@@ -1442,7 +1995,7 @@ export default function Home() {
+                           type="password"
+                           value={settingsConfirmPassword}
+                           onChange={(e) => setSettingsConfirmPassword(e.target.value)}
+-                          placeholder="??鍮꾨?踰덊샇 ?뺤씤"
++                          placeholder="????쑬?甕곕뜇???類ㅼ뵥"
+                           className="w-full p-3 border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm dark:bg-slate-800"
+                         />
+                       </div>
+@@ -1457,7 +2010,7 @@ export default function Home() {
+                   </form>
+                 </div>
+               ) : (
+-                /* 硫붿씪 紐⑸줉 由ъ뒪??(Inbox, Archive, Sent) - 吏硫붿씪 ?ㅽ???*/
++                /* 筌롫뗄??筌뤴뫖以??귐딅뮞??(Inbox, Archive, Sent) - 筌왖筌롫뗄???????*/
+                 <div className="flex-1 flex flex-col overflow-hidden">
+                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
+                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">
+@@ -1474,50 +2027,73 @@ export default function Home() {
+                         </svg>
+                         <p className="text-sm font-medium">No messages found</p>
+                         {userTab === 'inbox' && (
+-                          <p className="text-xs text-slate-400">?ㅻ뒛???쎌냽 硫붿씪??紐⑤몢 ?꾨즺?섏뿀嫄곕굹 ?꾩쭅 ?꾩넚?섏? ?딆븯?듬땲??</p>
++                          <p className="text-xs text-slate-400">??삳뮎????뚮꺗 筌롫뗄???筌뤴뫀紐??袁⑥┷??뤿?椰꾧퀡援??袁⑹춦 ?袁⑸꽊??? ??녿릭??щ빍??</p>
+                         )}
+                       </div>
+                     ) : (
+-                      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+-                        {userFiltered.map((email) => {
+-                          const isUnread = email.status === 'unread' && email.receiver === currentUser.virtualEmail;
+-                          return (
+-                            <div
+-                              key={email.id}
+-                              onClick={() => handleSelectEmail(email)}
+-                              className={`h-12 flex items-center px-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer border-b border-slate-100 dark:border-slate-800 transition-all ${
+-                                isUnread 
+-                                  ? 'bg-white dark:bg-slate-900 font-bold text-[#000000] dark:text-white' 
+-                                  : 'bg-[#F2F5F9]/40 dark:bg-slate-850/10 text-slate-500 dark:text-slate-400 font-normal'
+-                              }`}
+-                            >
+-                              {/* 吏硫붿씪 ?쒓렇?덉쿂 ?ㅽ? ?꾩씠肄?*/}
+-                              <div className="flex items-center px-2 shrink-0 text-slate-350 dark:text-slate-700">
+-                                <svg className="w-4 h-4 hover:text-amber-400 transition-all cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.246.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.906a1 1 0 00.95-.69l1.519-4.674z" />
+-                                </svg>
+-                              </div>
+-
+-                              <div className="w-40 shrink-0 pr-4 truncate text-sm">
+-                                <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
+-                                  {email.sender === 'team@stopfive.com' ? 'StopFive Team' : email.sender.split('@')[0]}
+-                                </span>
+-                              </div>
+-                              <div className="flex-1 min-w-0 flex items-center space-x-2 pr-6 text-sm">
+-                                <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}>
+-                                  {email.subject}
+-                                </span>
+-                                <span className="text-slate-400 truncate font-light text-[13px]">??{email.body}</span>
+-                              </div>
+-                              <div className="w-20 text-right shrink-0 text-xs">
+-                                <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
+-                                  {new Date(email.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+-                                </span>
+-                              </div>
+-                            </div>
+-                          );
+-                        })}
+-                      </div>
++                      <table className="w-full text-left border-collapse text-[14px]">
++                        <thead>
++                          <tr className="bg-white dark:bg-slate-900 text-[#5f6368] dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-normal text-[13px] h-10">
++                            <th className="px-4 py-2 font-normal w-12 text-center whitespace-nowrap">
++                              <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-slate-500" disabled />
++                            </th>
++                            <th className="px-2 py-2 font-normal w-10 text-center whitespace-nowrap"></th>
++                            <th className="px-2 py-2 font-normal whitespace-nowrap">癰귣?沅????/th>
++                            <th className="px-2 py-2 font-normal whitespace-nowrap">??뺛걠</th>
++                            <th className="px-4 py-2 font-normal text-right whitespace-nowrap w-24">獄쏆룇???볦퍢</th>
++                          </tr>
++                        </thead>
++                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
++                          {userFiltered.map((email) => {
++                            const isUnread = userTab !== 'sent' && email.status === 'unread' && email.receiver === currentUser.virtualEmail;
++                            const isReplyInSent = userTab === 'sent' && email.receiver === currentUser.virtualEmail && email.replyContent;
++                            
++                            const displaySender = isReplyInSent ? email.receiver : email.sender;
++                            const displaySubject = isReplyInSent ? `Re: ${email.subject}` : email.subject;
++                            const displayBody = isReplyInSent ? email.replyContent : email.body;
++                            const displayDate = isReplyInSent ? email.answeredAt : email.createdAt;
++                            
++                            return (
++                              <tr
++                                key={email.id}
++                                onClick={() => handleSelectEmail(email)}
++                                className={`h-10 hover:shadow-[inset_1px_0_0_#dadce0,inset_-1px_0_0_#dadce0,0_1px_2px_0_rgba(60,64,67,.3),0_1px_3px_1px_rgba(60,64,67,.15)] hover:z-10 relative cursor-pointer border-b border-[#f1f3f4] dark:border-slate-800 transition-all ${
++                                  isUnread && !isReplyInSent
++                                    ? 'bg-white dark:bg-slate-900 font-bold text-[#000000] dark:text-white' 
++                                    : 'bg-[#F2F5F9]/40 dark:bg-slate-850/10 text-slate-500 dark:text-slate-400 font-normal'
++                                }`}
++                              >
++                                <td className="px-4 py-0 text-center w-12 whitespace-nowrap">
++                                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-slate-500 cursor-pointer" onClick={(e) => e.stopPropagation()} />
++                                </td>
++                                <td className="px-2 py-0 text-center w-10 whitespace-nowrap text-slate-350 dark:text-slate-700">
++                                  <svg className="w-4 h-4 hover:text-amber-400 transition-all cursor-pointer inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" onClick={(e) => e.stopPropagation()}>
++                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.246.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.906a1 1 0 00.95-.69l1.519-4.674z" />
++                                  </svg>
++                                </td>
++                                <td className="px-2 py-0 w-48 truncate whitespace-nowrap text-[14px]">
++                                  <span className={isUnread && !isReplyInSent ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
++                                    {displaySender === 'team@stopfive.com' ? 'StopFive Team' : displaySender.split('@')[0]}
++                                  </span>
++                                </td>
++                                <td className="px-2 py-0 w-full whitespace-nowrap text-[14px]">
++                                  <div className="flex items-center space-x-2 max-w-2xl">
++                                    <span className={`truncate ${isUnread && !isReplyInSent ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-800 dark:text-slate-200 font-normal'}`}>
++                                      {displaySubject}
++                                    </span>
++                                    <span className="text-slate-400 truncate font-light text-[13px]">??{displayBody}</span>
++                                  </div>
++                                </td>
++                                <td className="px-4 py-0 text-right whitespace-nowrap w-24 text-[12px]">
++                                  <span className={isUnread && !isReplyInSent ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-450'}>
++                                    {new Date(displayDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
++                                  </span>
++                                </td>
++                              </tr>
++                            );
++                          })}
++                        </tbody>
++                      </table>
+                     )}
+                   </div>
+                 </div>
+@@ -1527,7 +2103,7 @@ export default function Home() {
+         </div>
+       )}
+ 
+-      {/* C. Compose 硫붿씪 ?곌린 ?앹뾽 紐⑤떖 */}
++      {/* C. Compose 筌롫뗄???怨뚮┛ ??밸씜 筌뤴뫀??*/}
+       {isComposeOpen && (
+         <div className="fixed bottom-0 right-12 w-[520px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-fade-in-up">
+           <div className="h-10 bg-slate-950 text-white px-4 flex items-center justify-between shrink-0">
+@@ -1549,7 +2125,7 @@ export default function Home() {
+                   className="w-full text-xs bg-transparent focus:outline-none dark:text-white dark:bg-slate-800 border-none cursor-pointer"
+                   required
+                 >
+-                  <option value="" className="text-slate-400">諛쒖넚 ????좎? ?좏깮</option>
++                  <option value="" className="text-slate-400">獄쏆뮇???????醫? ?醫뤾문</option>
+                   {allUsers.filter(u => u.role !== 'admin').map(u => (
+                     <option key={u.id} value={u.virtualEmail}>{u.name} ({u.virtualEmail})</option>
+                   ))}
+@@ -1559,7 +2135,7 @@ export default function Home() {
+                   type="text"
+                   value={composeTo}
+                   onChange={(e) => setComposeTo(e.target.value)}
+-                  placeholder="receiver@stopfive.com (?? team@stopfive.com)"
++                  placeholder="receiver@stopfive.com (?? team@stopfive.com)"
+                   className="w-full text-xs bg-transparent focus:outline-none dark:text-white"
+                   required
+                 />
+@@ -1572,7 +2148,7 @@ export default function Home() {
+                 type="text"
+                 value={composeSubject}
+                 onChange={(e) => setComposeSubject(e.target.value)}
+-                placeholder="?쒕ぉ???낅젰?섏꽭??
++                placeholder="??뺛걠????낆젾??뤾쉭??
+                 className="w-full text-xs bg-transparent focus:outline-none dark:text-white"
+                 required
+               />
+@@ -1581,7 +2157,7 @@ export default function Home() {
+             <textarea
+               value={composeBody}
+               onChange={(e) => setComposeBody(e.target.value)}
+-              placeholder="蹂몃Ц???묒꽦?섏꽭??.."
++              placeholder="癰귣챶揆???臾믨쉐??뤾쉭??.."
+               className="flex-1 h-48 text-xs p-2 focus:outline-none resize-none dark:bg-slate-800 dark:text-white rounded-lg border border-transparent dark:border-slate-700"
+               required
+             />
+@@ -1598,15 +2174,15 @@ export default function Home() {
+         </div>
+       )}
+ 
+-      {/* D. 泥댄뿕 肄붿뒪 媛?대뱶 ?ㅻ쾭?덉씠 ?앹뾽 紐⑤떖 */}
++      {/* D. 筌ｋ똾肉??꾨뗄??揶쎛??諭???살쒔??됱뵠 ??밸씜 筌뤴뫀??*/}
+       {isCourseGuideOpen && (
+         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-zoom-in">
+-            {/* 紐⑤떖 ?ㅻ뜑 */}
++            {/* 筌뤴뫀????삳쐭 */}
+             <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+               <div className="flex items-center space-x-2">
+-                <span className="text-lg">?렞</span>
+-                <h3 className="text-base font-bold text-slate-900 dark:text-white">3??5??泥댄뿕 肄붿뒪 ?곸꽭 ?덈궡</h3>
++                <span className="text-lg">???/span>
++                <h3 className="text-base font-bold text-slate-900 dark:text-white">3??5??筌ｋ똾肉??꾨뗄???怨멸쉭 ??덇땀</h3>
+               </div>
+               <button 
+                 onClick={() => setIsCourseGuideOpen(false)}
+@@ -1618,28 +2194,28 @@ export default function Home() {
+               </button>
+             </div>
+ 
+-            {/* 紐⑤떖 蹂몃Ц */}
++            {/* 筌뤴뫀??癰귣챶揆 */}
+             <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+               <div className="space-y-1">
+-                <h4 className="text-xs font-bold text-primary uppercase">泥댄뿕 肄붿뒪 媛쒖슂</h4>
++                <h4 className="text-xs font-bold text-primary uppercase">筌ｋ똾肉??꾨뗄??揶쏆뮇??/h4>
+                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+-                  StopFive???듭떖 媛?ㅼ씤 <strong>"?뺤떆 硫붿씪 ?뚮┝ + 30珥????듭옣 ?묓릟"</strong>???꾨젰??寃利앺븯湲??꾪빐 ?밸퀎??媛쒕컻??3??怨쇱젙 泥댄뿕 ?꾨줈洹몃옩?낅땲??
+-                  蹂듭옟???ㅼ튂 怨쇱젙 ?놁씠 ?곕え ?쒕??덉씠?곕? ?듯빐 媛?곸쑝濡?泥댄뿕???꾩닔?????덉뒿?덈떎.
++                  StopFive?????뼎 揶쎛??쇱뵥 <strong>"?類ㅻ뻻 筌롫뗄?????뵝 + 30???????삢 ?臾볥쬉"</strong>???袁⑥젾??野꺜筌앹빜釉?묾??袁る퉸 ?諛명??揶쏆뮆而??3???⑥눘??筌ｋ똾肉??袁⑥쨮域밸챶???낅빍??
++                  癰귣벊?????쇳뒄 ?⑥눘????곸뵠 ?怨뺛걟 ?????됱뵠?怨? ???퉸 揶쎛?怨몄몵嚥?筌ｋ똾肉???袁⑸땾??????됰뮸??덈뼄.
+                 </p>
+               </div>
+ 
+               <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 space-y-4">
+-                <h4 className="text-xs font-bold text-slate-900 dark:text-white">Day蹂??≪뀡 ?몃? 媛?대뱶</h4>
++                <h4 className="text-xs font-bold text-slate-900 dark:text-white">Day癰???る??紐? 揶쎛??諭?/h4>
+                 
+                 <div className="space-y-4 text-xs">
+                   {/* Day 1 */}
+                   <div className="flex gap-3">
+                     <span className="w-6 h-6 bg-blue-100 dark:bg-blue-950 text-primary rounded-full flex items-center justify-center font-bold text-[10px] shrink-0">1</span>
+                     <div className="space-y-1">
+-                      <h5 className="font-bold text-slate-800 dark:text-slate-200">Day 1: ?됰룞 ?몃━嫄??쒕룞 (1~2?뚯감)</h5>
++                      <h5 className="font-bold text-slate-800 dark:text-slate-200">Day 1: ??곕짗 ?紐꺿봺椰???뺣짗 (1~2???컧)</h5>
+                       <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
+-                        媛????利됱떆 ?섏떊?⑥뿉???곗뺨 硫붿씪(1?뚯감)???쎄퀬 吏㏃? ?듭옣??蹂대깄?덈떎. 
+-                        洹????듦퀎 ??뿉??<strong>'?ㅼ쓬 誘몄뀡 利됱떆 諛쏄린'</strong> 踰꾪듉???대┃?섎㈃ 2?뚯감 誘몄뀡(湲곗?媛?耳쒓린 ?????섏떊?⑥뿉 諛곕떖?섏뼱 諛붾줈 ?듭옣??吏꾪뻾?????덉뒿?덈떎.
++                        揶쎛????筌앸맩????뤿뻿??λ퓠???怨쀫벰 筌롫뗄??1???컧)????꾪?筌욁룂? ???삢??癰귣?源??덈뼄. 
++                        域?????????肉??<strong>'??쇱벉 沃섎챷??筌앸맩??獄쏆룄由?</strong> 甕곌쑵????????롢늺 2???컧 沃섎챷??疫꿸퀣?揶??녹뮄由???????뤿뻿??λ퓠 獄쏄퀡???뤿선 獄쏅뗀以????삢??筌욊쑵六??????됰뮸??덈뼄.
+                       </p>
+                     </div>
+                   </div>
+@@ -1648,10 +2224,10 @@ export default function Home() {
+                   <div className="flex gap-3">
+                     <span className="w-6 h-6 bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0">2</span>
+                     <div className="space-y-1">
+-                      <h5 className="font-bold text-slate-800 dark:text-slate-200">Day 2: 猷⑦떞 媛뺥솕 (3~4?뚯감)</h5>
++                      <h5 className="font-bold text-slate-800 dark:text-slate-200">Day 2: ?룐뫂??揶쏅벤??(3~4???컧)</h5>
+                       <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
+-                        Day 1???꾨즺?????듦퀎 ??뿉??<strong>'?섎（ 吏?섍린 (移섑듃)'</strong> 踰꾪듉???대┃?섏뿬 ?쒕??덉씠???섎（瑜?寃쎄낵?쒗궢?덈떎. 
+-                        怨㏓컮濡?3?뚯감 誘몄뀡??諛쒖넚?섎ŉ, ?듭옣 ?꾩넚 ?꾨즺 ???ㅼ떆 <strong>'?ㅼ쓬 誘몄뀡 利됱떆 諛쏄린'</strong>瑜??듯빐 4?뚯감 誘몄뀡源뚯? ?꾨즺?⑸땲??
++                        Day 1???袁⑥┷??????????肉??<strong>'??롳펷 筌왖??띾┛ (燁살꼹??'</strong> 甕곌쑵????????뤿연 ?????됱뵠????롳펷??野껋럡???쀪땁??덈뼄. 
++                        ?ⓦ룗而?에?3???컧 沃섎챷???獄쏆뮇???렽? ???삢 ?袁⑸꽊 ?袁⑥┷ ????쇰뻻 <strong>'??쇱벉 沃섎챷??筌앸맩??獄쏆룄由?</strong>?????퉸 4???컧 沃섎챷?→틦?? ?袁⑥┷??몃빍??
+                       </p>
+                     </div>
+                   </div>
+@@ -1660,10 +2236,10 @@ export default function Home() {
+                   <div className="flex gap-3">
+                     <span className="w-6 h-6 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0">3</span>
+                     <div className="space-y-1">
+-                      <h5 className="font-bold text-slate-800 dark:text-slate-200">Day 3: 理쒖쥌 ?꾩닔 (5?뚯감)</h5>
++                      <h5 className="font-bold text-slate-800 dark:text-slate-200">Day 3: 筌ㅼ뮇伊??袁⑸땾 (5???컧)</h5>
+                       <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
+-                        留덉?留됱쑝濡??듦퀎 ??뿉??<strong>'?섎（ 吏?섍린 (移섑듃)'</strong>瑜???踰???援щ룞?섎㈃ 5?뚯감 ?쇰뱶諛?硫붿씪??諛곕떖?⑸땲?? 
+-                        ?듭옣 ?묒꽦???꾨즺?섎㈃ 3???꾩꽦 肄붿뒪 異뺥븯 ?몃줈?쇨? ?쒖꽦?붾릺硫? 蹂몄씤???뺣웾 ?듦퀎 蹂닿퀬?쒓? ?낅뜲?댄듃?⑸땲??
++                        筌띾뜆?筌띾맩?앮에???????肉??<strong>'??롳펷 筌왖??띾┛ (燁살꼹??'</strong>????甕????닌됰짗??롢늺 5???컧 ??곕굡獄?筌롫뗄???獄쏄퀡???몃빍?? 
++                        ???삢 ?臾믨쉐???袁⑥┷??롢늺 3???袁⑷쉐 ?꾨뗄???곕벤釉??紐껋쨮??? ??뽮쉐?遺얜┷筌? 癰귣챷????類ｌ쎗 ????癰귣떯???? ??낅쑓??꾨뱜??몃빍??
+                       </p>
+                     </div>
+                   </div>
+@@ -1671,17 +2247,17 @@ export default function Home() {
+               </div>
+ 
+               <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 bg-slate-50 dark:bg-slate-950/20 p-4 rounded-2xl text-[11px] text-slate-400 leading-relaxed">
+-                ?뱄툘 <strong>?댁젨(USER)?섏쓣 ?꾪븳 ??/strong>: 泥댄뿕 吏꾪뻾 ?곹깭???몄젣?좎? ?ъ씠?쒕컮 理쒗븯?⑥쓽 '?ㅻ젋吏???먯꽑 由ъ뀑' ?⑥텛瑜??듯빐 珥덇린?뷀븯??1?뚯감遺???ㅼ떆 ?쒕??덉씠???대낵 ???덉뒿?덈떎.
++                ?諭꾪닔 <strong>??곸젴(USER)??륁뱽 ?袁る립 ??/strong>: 筌ｋ똾肉?筌욊쑵六??怨밴묶???紐꾩젫?醫? ?????뺤뺍 筌ㅼ뮉釉??μ벥 '??살젉筌왖???癒?퐨 ?귐딅? ??ν뀤?????퉸 ?λ뜃由?酉釉??1???컧?봔????쇰뻻 ?????됱뵠??????????됰뮸??덈뼄.
+               </div>
+             </div>
+ 
+-            {/* 紐⑤떖 ?명꽣 */}
++            {/* 筌뤴뫀???紐낃숲 */}
+             <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+               <button
+                 onClick={() => setIsCourseGuideOpen(false)}
+                 className="px-5 py-2 bg-primary hover:bg-blue-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+               >
+-                媛?대뱶 ?リ린
++                揶쎛??諭???る┛
+               </button>
+             </div>
+           </div>
+@@ -1690,4 +2266,4 @@ export default function Home() {
+ 
+     </div>
+   );
+-}
+\ No newline at end of file
++}
