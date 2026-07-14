@@ -1861,7 +1861,7 @@ export default function Home() {
 
                     {/* 본문 영역 - 크게 키우고 선명하게 변경 */}
                     <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-[#202124] dark:text-slate-100 font-normal">
-                      {selectedEmail.status === 'expired' ? (
+                      {(selectedEmail.status === 'expired' || (selectedEmail.isTimeoutLimit && selectedEmail.status === 'unread' && (new Date().getTime() - new Date(selectedEmail.createdAt).getTime() > 5 * 60 * 1000))) ? (
                         <div className="p-6 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm flex flex-col items-center space-y-2">
                           <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1874,7 +1874,7 @@ export default function Home() {
                     </div>
 
                     {/* 미답장 미션 메일인 경우 대형 답장창 제공 */}
-                    {selectedEmail.receiver === currentUser.virtualEmail && !selectedEmail.replyContent && selectedEmail.status !== 'expired' && (
+                    {selectedEmail.receiver === currentUser.virtualEmail && !selectedEmail.replyContent && selectedEmail.status !== 'expired' && !(selectedEmail.isTimeoutLimit && selectedEmail.status === 'unread' && (new Date().getTime() - new Date(selectedEmail.createdAt).getTime() > 5 * 60 * 1000)) && (
                       <form onSubmit={handleSendReply} className="border-t border-slate-100 dark:border-slate-850 pt-6 space-y-4">
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
@@ -2331,7 +2331,9 @@ export default function Home() {
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
                         {userFiltered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((email) => {
-                          const isUnread = email.status === 'unread' && email.receiver === currentUser.virtualEmail;
+                          const isExpired = email.status === 'expired' || 
+                            (email.isTimeoutLimit && email.status === 'unread' && (new Date().getTime() - new Date(email.createdAt).getTime() > 5 * 60 * 1000));
+                          const isUnread = email.status === 'unread' && email.receiver === currentUser.virtualEmail && !isExpired;
                           return (
                             <div
                               key={email.id}
@@ -2348,7 +2350,7 @@ export default function Home() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.246.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.906a1 1 0 00.95-.69l1.519-4.674z" />
                                 </svg>
                               </div>
-
+ 
                               <div className="w-40 shrink-0 pr-4 truncate text-[14px] hidden sm:block">
                                 <span className={isUnread ? 'text-[#000000] dark:text-white font-bold' : 'text-slate-700 dark:text-slate-350 font-normal'}>
                                   {userTab === 'sent' 
@@ -2358,7 +2360,7 @@ export default function Home() {
                               </div>
                               <div className="flex-1 min-w-0 pr-6 text-[14px] flex items-center gap-2">
                                 {(email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission) && (
-                                  email.status === 'expired' ? (
+                                  isExpired ? (
                                     <span className="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 rounded shrink-0">
                                       만료
                                     </span>
