@@ -81,7 +81,15 @@ export default function Home() {
   const [scheduledHour, setScheduledHour] = useState('09');
   const [scheduledMinute, setScheduledMinute] = useState('00');
   const [scheduledTimeoutLimit, setScheduledTimeoutLimit] = useState(false);
+  const [scheduledForceTimeout, setScheduledForceTimeout] = useState(false);
+  const [useTimeoutMissionsSetting, setUseTimeoutMissionsSetting] = useState(true);
   const [selectedScheduledEmail, setSelectedScheduledEmail] = useState<any>(null);
+
+  useEffect(() => {
+    if (currentUser) {
+      setUseTimeoutMissionsSetting(currentUser.useTimeoutMissions ?? true);
+    }
+  }, [currentUser]);
 
   const formatDateTime = (dateStr: string) => {
     if (!dateStr) return '';
@@ -1324,7 +1332,8 @@ export default function Home() {
                         scheduledSubject,
                         scheduledBody,
                         scheduleDateStr,
-                        scheduledTimeoutLimit
+                        scheduledTimeoutLimit,
+                        scheduledForceTimeout
                       );
                       
                       if (success) {
@@ -1336,6 +1345,7 @@ export default function Home() {
                         setScheduledHour('09');
                         setScheduledMinute('00');
                         setScheduledTimeoutLimit(false);
+                        setScheduledForceTimeout(false);
                         setAdminTab('scheduled-manage');
                         setSelectedEmail(null);
                       } else {
@@ -1403,17 +1413,36 @@ export default function Home() {
                       </div>
 
                       {/* 5분 제한 옵션 */}
-                      <div className="flex items-center space-x-2 py-2">
-                        <input
-                          id="timeout_limit"
-                          type="checkbox"
-                          checked={scheduledTimeoutLimit}
-                          onChange={(e) => setScheduledTimeoutLimit(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="timeout_limit" className="text-sm font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
-                          5분 제한 미션으로 설정 (발송 후 5분 내에 읽지 않으면 만료 처리)
-                        </label>
+                      <div className="space-y-2 py-2 border-y border-slate-100 dark:border-slate-800 my-2">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            id="timeout_limit"
+                            type="checkbox"
+                            checked={scheduledTimeoutLimit}
+                            onChange={(e) => {
+                              setScheduledTimeoutLimit(e.target.checked);
+                              if (!e.target.checked) setScheduledForceTimeout(false);
+                            }}
+                            className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="timeout_limit" className="text-sm font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
+                            5분 제한 미션으로 설정 (발송 후 5분 내에 읽지 않으면 만료 처리)
+                          </label>
+                        </div>
+                        {scheduledTimeoutLimit && (
+                          <div className="flex items-center space-x-2 pl-6 transition-all duration-300">
+                            <input
+                              id="force_timeout"
+                              type="checkbox"
+                              checked={scheduledForceTimeout}
+                              onChange={(e) => setScheduledForceTimeout(e.target.checked)}
+                              className="w-4 h-4 text-red-600 border-slate-350 rounded focus:ring-red-500"
+                            />
+                            <label htmlFor="force_timeout" className="text-xs font-medium text-red-600 dark:text-red-400 cursor-pointer">
+                              ⚡ 강제 만료 적용 (유저 설정을 무시하고 무조건 5분 제한 적용)
+                            </label>
+                          </div>
+                        )}
                       </div>
 
                       {/* 제목 */}
@@ -2152,7 +2181,7 @@ export default function Home() {
                       return;
                     }
                     
-                    const updated = await updateUserProfile(currentUser.virtualEmail, deliveryTime, name, settingsNewPassword || undefined);
+                    const updated = await updateUserProfile(currentUser.virtualEmail, deliveryTime, name, settingsNewPassword || undefined, useTimeoutMissionsSetting);
                     if (updated) {
                       setCurrentUser(updated);
                       setAllUsers(await getAllUsers());
@@ -2194,6 +2223,20 @@ export default function Home() {
                       <span className="text-[10px] text-slate-400 block mt-1">
                         * 지정한 시간에 매일 정기 앵커 메일이 가상 수신함으로 배달됩니다.
                       </span>
+                    </div>
+
+                    {/* 5분 타임아웃 미션 참여 여부 */}
+                    <div className="flex items-center space-x-2 py-2 border-t border-slate-100 dark:border-slate-800/60 pt-4">
+                      <input
+                        id="user_use_timeout"
+                        type="checkbox"
+                        checked={useTimeoutMissionsSetting}
+                        onChange={(e) => setUseTimeoutMissionsSetting(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="user_use_timeout" className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                        5분 타임아웃 미션 참여 (체크 해제 시 일반 미션으로 발송됨)
+                      </label>
                     </div>
 
                     <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-4">

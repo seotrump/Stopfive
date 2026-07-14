@@ -10,6 +10,7 @@ export interface UserProfile {
   createdAt: string;
   role: 'user' | 'admin';
   password?: string;
+  useTimeoutMissions?: boolean;
   
   // 5회 체험 코스 필드
   courseStatus: 'not_started' | 'ongoing' | 'completed';
@@ -32,6 +33,7 @@ export interface EmailMessage {
   isCourseMission?: boolean;
   courseStepIndex?: number;
   isTimeoutLimit?: boolean;
+  isForceTimeout?: boolean;
 }
 
 export interface ScheduledEmail {
@@ -44,6 +46,7 @@ export interface ScheduledEmail {
   status: 'pending' | 'sent' | 'cancelled';
   createdAt: string;
   isTimeoutLimit?: boolean;
+  isForceTimeout?: boolean;
 }
 
 // 5초 ~ 1분 이내에 행동할 수 있는 즉각적인 행동 미션 라이브러리

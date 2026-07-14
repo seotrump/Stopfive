@@ -211,7 +211,13 @@ export const sendAdminMailToUser = async (receiverVirtualEmail: string, subject:
   return !error;
 };
 
-export const updateUserProfile = async (virtualEmail: string, deliveryTime: string, name?: string, newPassword?: string): Promise<UserProfile | null> => {
+export const updateUserProfile = async (
+  virtualEmail: string,
+  deliveryTime: string,
+  name?: string,
+  newPassword?: string,
+  useTimeoutMissions?: boolean
+): Promise<UserProfile | null> => {
   if (newPassword) {
     const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
     if (authError) {
@@ -222,6 +228,7 @@ export const updateUserProfile = async (virtualEmail: string, deliveryTime: stri
 
   const updates: any = { delivery_time: deliveryTime.includes(':') && deliveryTime.length === 5 ? deliveryTime + ':00' : deliveryTime };
   if (name) updates.name = name;
+  if (useTimeoutMissions !== undefined) updates.use_timeout_missions = useTimeoutMissions;
 
   const { data, error } = await supabase.from('users')
     .update(updates)
@@ -269,6 +276,7 @@ function mapUserFromDb(row: any): UserProfile {
     totalAppointments: row.total_appointments,
     createdAt: row.created_at,
     role: row.virtual_email === 'team@stopfive.com' ? 'admin' : 'user',
+    useTimeoutMissions: row.use_timeout_missions,
     courseStatus: 'not_started', // DB에 없는 임시 필드
     courseStep: 0,
     courseStartDate: null
@@ -288,7 +296,8 @@ function mapEmailFromDb(row: any): EmailMessage {
     createdAt: row.created_at,
     answeredAt: row.answered_at,
     replyContent: row.reply_content,
-    isTimeoutLimit: row.is_timeout_limit
+    isTimeoutLimit: row.is_timeout_limit,
+    isForceTimeout: row.is_force_timeout
   };
 }
 
@@ -307,7 +316,8 @@ export const getScheduledEmails = async (): Promise<ScheduledEmail[]> => {
     scheduledAt: row.scheduled_at,
     status: row.status,
     createdAt: row.created_at,
-    isTimeoutLimit: row.is_timeout_limit
+    isTimeoutLimit: row.is_timeout_limit,
+    isForceTimeout: row.is_force_timeout
   }));
 };
 
@@ -317,7 +327,8 @@ export const createScheduledEmail = async (
   subject: string,
   body: string,
   scheduledAt: string,
-  isTimeoutLimit: boolean = false
+  isTimeoutLimit: boolean = false,
+  isForceTimeout: boolean = false
 ): Promise<boolean> => {
   const { error } = await supabase.from('scheduled_emails').insert([{
     receiver_virtual_email: receiverVirtualEmail,
@@ -325,7 +336,8 @@ export const createScheduledEmail = async (
     subject,
     body,
     scheduled_at: scheduledAt,
-    is_timeout_limit: isTimeoutLimit
+    is_timeout_limit: isTimeoutLimit,
+    is_force_timeout: isForceTimeout
   }]);
   if (error) {
     console.error('Error creating scheduled email:', error);
@@ -355,8 +367,16 @@ export const processScheduledEmails = async (): Promise<number> => {
   
   let sent = 0;
   for (const item of pending) {
-    const { data: user } = await supabase.from('users').select('id').eq('virtual_email', item.receiver_virtual_email).single();
+    const { data: user } = await supabase.from('users')
+      .select('id, use_timeout_missions')
+      .eq('virtual_email', item.receiver_virtual_email)
+      .single();
     if (!user) continue;
+    
+    // 만료 여부 최종 판단 (유저 설정 반영)
+    // 1) 강제(is_force_timeout)인 경우 무조건 만료 제한 활성화
+    // 2) 일반 제한인 경우 유저가 timeout 미션 참여 허용(use_timeout_missions)했을 때만 활성화
+    const finalTimeoutLimit = item.is_timeout_limit && (item.is_force_timeout || user.use_timeout_missions);
     
     const { error: insertError } = await supabase.from('emails').insert([{
       user_id: user.id,
@@ -366,7 +386,8 @@ export const processScheduledEmails = async (): Promise<number> => {
       body: item.body,
       status: 'unread',
       is_system_mission: false,
-      is_timeout_limit: item.is_timeout_limit
+      is_timeout_limit: finalTimeoutLimit,
+      is_force_timeout: item.is_force_timeout
     }]);
     
     if (!insertError) {
