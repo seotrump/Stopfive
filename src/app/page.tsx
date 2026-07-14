@@ -343,22 +343,26 @@ export default function Home() {
     const isAdmin = currentUser.role === 'admin';
     
     return emails.filter((email: any) => {
-      const isMission = email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission;
+      const receiverLower = email.receiver?.toLowerCase();
+      const senderLower = email.sender?.toLowerCase();
+      const userEmailLower = currentUser.virtualEmail?.toLowerCase();
+      const isMission = senderLower === 'team@stopfive.com' || email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission;
+
       if (userTab === 'inbox') {
         // 일반 메일만 받은편지함에 노출 (미션 메일 제외)
-        return email.receiver === currentUser.virtualEmail && email.status !== 'archived' && !isMission;
+        return receiverLower === userEmailLower && email.status !== 'archived' && !isMission;
       }
       if (userTab === 'archive') {
         // 이미 답장했거나 아카이브된 일반 메일들
-        return email.receiver === currentUser.virtualEmail && email.status === 'archived' && !isMission;
+        return receiverLower === userEmailLower && email.status === 'archived' && !isMission;
       }
       if (userTab === 'missions') {
         // 미션 메일만 미션관리함에 노출
-        return email.receiver === currentUser.virtualEmail && isMission;
+        return receiverLower === userEmailLower && isMission;
       }
       if (userTab === 'sent') {
         // 본인이 발신한 메일들
-        return email.sender === currentUser.virtualEmail;
+        return senderLower === userEmailLower;
       }
       return false;
     }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1652,9 +1656,9 @@ export default function Home() {
                     </svg>
                     <span>받은편지함</span>
                   </div>
-                  {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived' && !(e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission)).length > 0 && (
+                  {emails.filter((e: any) => e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && e.status !== 'archived' && !(e.sender?.toLowerCase() === 'team@stopfive.com' || e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission)).length > 0 && (
                     <span className="text-[#202124] dark:text-white text-xs font-bold pl-2 md:px-1">
-                      {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && e.status !== 'archived' && !(e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission)).length}
+                      {emails.filter((e: any) => e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && e.status !== 'archived' && !(e.sender?.toLowerCase() === 'team@stopfive.com' || e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission)).length}
                     </span>
                   )}
                 </button>
@@ -1673,9 +1677,9 @@ export default function Home() {
                     </svg>
                     <span>미션관리함</span>
                   </div>
-                  {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && (e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission) && e.status === 'unread').length > 0 && (
+                  {emails.filter((e: any) => e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && (e.sender?.toLowerCase() === 'team@stopfive.com' || e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission) && e.status === 'unread').length > 0 && (
                     <span className="text-[#202124] dark:text-white text-xs font-bold pl-2 md:px-1">
-                      {emails.filter((e: any) => e.receiver === currentUser.virtualEmail && (e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission) && e.status === 'unread').length}
+                      {emails.filter((e: any) => e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && (e.sender?.toLowerCase() === 'team@stopfive.com' || e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission) && e.status === 'unread').length}
                     </span>
                   )}
                 </button>
@@ -2341,7 +2345,7 @@ export default function Home() {
                         {userFiltered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((email) => {
                           const isExpired = email.status === 'expired' || 
                             (email.isTimeoutLimit && email.status === 'unread' && (new Date().getTime() - new Date(email.createdAt).getTime() > 5 * 60 * 1000));
-                          const isUnread = email.status === 'unread' && email.receiver === currentUser.virtualEmail && !isExpired;
+                          const isUnread = email.status === 'unread' && email.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && !isExpired;
                           return (
                             <div
                               key={email.id}
