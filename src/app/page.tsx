@@ -72,14 +72,33 @@ export default function Home() {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
 
+  // 현재 KST 시각을 구하는 함수
+  const getKstNow = () => {
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const kstNow = new Date(utc + (9 * 60 * 60 * 1000));
+    const yyyy = kstNow.getFullYear();
+    const mm = String(kstNow.getMonth() + 1).padStart(2, '0');
+    const dd = String(kstNow.getDate()).padStart(2, '0');
+    const hh = String(kstNow.getHours()).padStart(2, '0');
+    const min = String(kstNow.getMinutes()).padStart(2, '0');
+    return {
+      date: `${yyyy}-${mm}-${dd}`,
+      hour: hh,
+      minute: min
+    };
+  };
+
+  const kstTime = getKstNow();
+
   // 예약 메일 상태
   const [scheduledEmails, setScheduledEmails] = useState<any[]>([]);
   const [scheduledTo, setScheduledTo] = useState('');
   const [scheduledSubject, setScheduledSubject] = useState('');
   const [scheduledBody, setScheduledBody] = useState('');
-  const [scheduledDate, setScheduledDate] = useState('');
-  const [scheduledHour, setScheduledHour] = useState('09');
-  const [scheduledMinute, setScheduledMinute] = useState('00');
+  const [scheduledDate, setScheduledDate] = useState(kstTime.date);
+  const [scheduledHour, setScheduledHour] = useState(kstTime.hour);
+  const [scheduledMinute, setScheduledMinute] = useState(kstTime.minute);
   const [scheduledTimeoutLimit, setScheduledTimeoutLimit] = useState(false);
   const [scheduledForceTimeout, setScheduledForceTimeout] = useState(false);
   const [useTimeoutMissionsSetting, setUseTimeoutMissionsSetting] = useState(true);
@@ -208,6 +227,12 @@ export default function Home() {
   useEffect(() => {
     if (adminTab === 'scheduled' || adminTab === 'scheduled-manage') {
       getScheduledEmails().then(setScheduledEmails);
+    }
+    if (adminTab === 'scheduled') {
+      const freshKst = getKstNow();
+      setScheduledDate(freshKst.date);
+      setScheduledHour(freshKst.hour);
+      setScheduledMinute(freshKst.minute);
     }
   }, [adminTab]);
 
@@ -1373,12 +1398,13 @@ export default function Home() {
                       
                       if (success) {
                         triggerToast("예약 메일이 등록되었습니다.", "예약 완료");
+                        const freshKst = getKstNow();
                         setScheduledTo('');
                         setScheduledSubject('');
                         setScheduledBody('');
-                        setScheduledDate('');
-                        setScheduledHour('09');
-                        setScheduledMinute('00');
+                        setScheduledDate(freshKst.date);
+                        setScheduledHour(freshKst.hour);
+                        setScheduledMinute(freshKst.minute);
                         setScheduledTimeoutLimit(false);
                         setScheduledForceTimeout(false);
                         setAdminTab('scheduled-manage');
