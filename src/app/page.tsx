@@ -380,10 +380,10 @@ export default function Home() {
       const isMission = senderLower === 'team@stopfive.com' || email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission;
       const elapsedMs = new Date().getTime() - new Date(email.createdAt).getTime();
       const isOver5Min = elapsedMs > 5 * 60 * 1000;
-      // isExpired: DB에 'expired' 또는 'read'로 표시된 경우(DB 제약 조건 우회) + 클라이언트 시간 계산 포함
+      // isExpired: pg_cron이 'read'로 업데이트한 경우 + 클라이언트 시간 계산 포함
       const isExpired = email.status === 'expired' || 
-        (email.isTimeoutLimit && email.status === 'read') ||
-        (email.isTimeoutLimit && email.status === 'unread' && isOver5Min);
+        (email.isTimeoutLimit && (email.status === 'read' || email.status === 'unread') && isOver5Min) ||
+        (email.isTimeoutLimit && email.status === 'read');
 
       if (userTab === 'inbox') {
         // 일반 메일 또는 아직 만료되지 않은 미션 메일만 노출
@@ -1921,20 +1921,27 @@ export default function Home() {
 
                     {/* 본문 영역 - 크게 키우고 선명하게 변경 */}
                     <div className="text-[15px] leading-[1.7] whitespace-pre-wrap text-[#202124] dark:text-slate-100 font-normal">
-                      {(selectedEmail.status === 'expired' || (selectedEmail.isTimeoutLimit && selectedEmail.status === 'unread' && (new Date().getTime() - new Date(selectedEmail.createdAt).getTime() > 5 * 60 * 1000))) ? (
-                        <div className="p-6 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm flex flex-col items-center space-y-2">
-                          <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                          <span className="text-center">⚠️ 본 미션은 발송 후 5분 내에 열람하지 않아 만료되었습니다. (본문 열람 불가)</span>
-                        </div>
-                      ) : (
-                        selectedEmail.body
-                      )}
+                      {(() => {
+                        const elapsedMs = new Date().getTime() - new Date(selectedEmail.createdAt).getTime();
+                        const isOver5Min = elapsedMs > 5 * 60 * 1000;
+                        const isEmailExpired = selectedEmail.status === 'expired' ||
+                          (selectedEmail.isTimeoutLimit && selectedEmail.status === 'read') ||
+                          (selectedEmail.isTimeoutLimit && selectedEmail.status === 'unread' && isOver5Min);
+                        return isEmailExpired ? (
+                          <div className="p-6 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm flex flex-col items-center space-y-2">
+                            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span className="text-center">⚠️ 본 미션은 발송 후 5분 내에 열람하지 않아 만료되었습니다. (본문 열람 불가)</span>
+                          </div>
+                        ) : (
+                          selectedEmail.body
+                        );
+                      })()}
                     </div>
 
                     {/* 미답장 미션 메일인 경우 대형 답장창 제공 */}
-                    {selectedEmail.receiver === currentUser.virtualEmail && !selectedEmail.replyContent && selectedEmail.status !== 'expired' && !(selectedEmail.isTimeoutLimit && selectedEmail.status === 'unread' && (new Date().getTime() - new Date(selectedEmail.createdAt).getTime() > 5 * 60 * 1000)) && (
+                    {selectedEmail.receiver === currentUser.virtualEmail && !selectedEmail.replyContent && !(selectedEmail.status === 'expired') && !(selectedEmail.isTimeoutLimit && selectedEmail.status === 'read') && !(selectedEmail.isTimeoutLimit && selectedEmail.status === 'unread' && (new Date().getTime() - new Date(selectedEmail.createdAt).getTime() > 5 * 60 * 1000)) && (
                       <form onSubmit={handleSendReply} className="border-t border-slate-100 dark:border-slate-850 pt-6 space-y-4">
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
