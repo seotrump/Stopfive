@@ -1696,14 +1696,16 @@ export default function Home() {
                     <span>받은편지함</span>
                   </div>
                   {emails.filter((e: any) => {
+                    const elapsed = new Date().getTime() - new Date(e.createdAt).getTime();
                     const isM = e.sender?.toLowerCase() === 'team@stopfive.com' || e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission;
-                    const isExp = e.status === 'expired' || (e.isTimeoutLimit && e.status === 'unread' && (new Date().getTime() - new Date(e.createdAt).getTime() > 5 * 60 * 1000));
+                    const isExp = e.status === 'expired' || (e.isTimeoutLimit && e.status === 'read') || (e.isTimeoutLimit && e.status === 'unread' && elapsed > 5 * 60 * 1000);
                     return e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && e.status !== 'archived' && (!isM || !isExp);
                   }).length > 0 && (
                     <span className="text-[#202124] dark:text-white text-xs font-bold pl-2 md:px-1">
                       {emails.filter((e: any) => {
+                        const elapsed = new Date().getTime() - new Date(e.createdAt).getTime();
                         const isM = e.sender?.toLowerCase() === 'team@stopfive.com' || e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission;
-                        const isExp = e.status === 'expired' || (e.isTimeoutLimit && e.status === 'unread' && (new Date().getTime() - new Date(e.createdAt).getTime() > 5 * 60 * 1000));
+                        const isExp = e.status === 'expired' || (e.isTimeoutLimit && e.status === 'read') || (e.isTimeoutLimit && e.status === 'unread' && elapsed > 5 * 60 * 1000);
                         return e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && e.status !== 'archived' && (!isM || !isExp);
                       }).length}
                     </span>
@@ -1725,15 +1727,17 @@ export default function Home() {
                     <span>미션관리함</span>
                   </div>
                   {emails.filter((e: any) => {
+                    const elapsed = new Date().getTime() - new Date(e.createdAt).getTime();
                     const isM = e.sender?.toLowerCase() === 'team@stopfive.com' || e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission;
-                    const isExp = e.status === 'expired' || (e.isTimeoutLimit && e.status === 'unread' && (new Date().getTime() - new Date(e.createdAt).getTime() > 5 * 60 * 1000));
-                    return e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && isM && isExp && e.status === 'unread';
+                    const isExp = e.status === 'expired' || (e.isTimeoutLimit && e.status === 'read') || (e.isTimeoutLimit && e.status === 'unread' && elapsed > 5 * 60 * 1000);
+                    return e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && isM && isExp;
                   }).length > 0 && (
                     <span className="text-[#202124] dark:text-white text-xs font-bold pl-2 md:px-1">
                       {emails.filter((e: any) => {
+                        const elapsed = new Date().getTime() - new Date(e.createdAt).getTime();
                         const isM = e.sender?.toLowerCase() === 'team@stopfive.com' || e.isTimeoutLimit || e.isForceTimeout || e.isSystemMission;
-                        const isExp = e.status === 'expired' || (e.isTimeoutLimit && e.status === 'unread' && (new Date().getTime() - new Date(e.createdAt).getTime() > 5 * 60 * 1000));
-                        return e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && isM && isExp && e.status === 'unread';
+                        const isExp = e.status === 'expired' || (e.isTimeoutLimit && e.status === 'read') || (e.isTimeoutLimit && e.status === 'unread' && elapsed > 5 * 60 * 1000);
+                        return e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && isM && isExp;
                       }).length}
                     </span>
                   )}
@@ -2409,8 +2413,10 @@ export default function Home() {
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
                         {userFiltered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((email) => {
-                          const isExpired = email.status === 'expired' || 
-                            (email.isTimeoutLimit && email.status === 'unread' && (new Date().getTime() - new Date(email.createdAt).getTime() > 5 * 60 * 1000));
+                          const _elapsed = new Date().getTime() - new Date(email.createdAt).getTime();
+                          const isExpired = email.status === 'expired' ||
+                            (email.isTimeoutLimit && email.status === 'read') ||
+                            (email.isTimeoutLimit && email.status === 'unread' && _elapsed > 5 * 60 * 1000);
                           const isUnread = email.status === 'unread' && email.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && !isExpired;
                           return (
                             <div
