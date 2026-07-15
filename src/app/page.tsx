@@ -1616,7 +1616,7 @@ export default function Home() {
               {/* Compose 신규 메일 쓰기 버튼 (지메일 스타일 - 색상 배제 및 은은한 보더형) */}
               <div className="px-1.5 mt-0 md:mt-2 mb-0 md:mb-2 shrink-0 flex items-center">
                 <button
-                  onClick={() => { setSelectedEmail(null); setUserTab('compose'); setIsMobileMenuOpen(false); setIsReservationChecked(true); }}
+                  onClick={() => { setSelectedEmail(null); setIsComposeOpen(true); setIsMobileMenuOpen(false); setIsReservationChecked(true); }}
                   className="ml-0 md:ml-3 pl-3 pr-6 py-2 md:py-4 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-medium rounded-2xl text-[14px] transition-all flex items-center space-x-2 md:space-x-3 shadow-sm w-fit"
                 >
                   <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
