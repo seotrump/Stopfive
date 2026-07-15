@@ -337,9 +337,11 @@ export const createScheduledEmail = async (
   body: string,
   scheduledAt: string,
   isTimeoutLimit: boolean = false,
-  isForceTimeout: boolean = false
+  isForceTimeout: boolean = false,
+  senderVirtualEmail: string = 'team@stopfive.com'
 ): Promise<boolean> => {
   const { error } = await supabase.from('scheduled_emails').insert([{
+    sender_virtual_email: senderVirtualEmail,
     receiver_virtual_email: receiverVirtualEmail,
     receiver_name: receiverName,
     subject,
@@ -362,6 +364,56 @@ export const cancelScheduledEmail = async (id: string): Promise<boolean> => {
     return false;
   }
   return true;
+};
+
+export const updateScheduledTimeoutOption = async (id: string, isTimeoutLimit: boolean): Promise<boolean> => {
+  const { error } = await supabase.from('scheduled_emails')
+    .update({ is_timeout_limit: isTimeoutLimit })
+    .eq('id', id);
+  if (error) {
+    console.error('Error updating scheduled email option:', error);
+    return false;
+  }
+  return true;
+};
+
+export const triggerScheduledEmailImmediately = async (id: string): Promise<boolean> => {
+  const { data: item, error: loadErr } = await supabase.from('scheduled_emails')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (loadErr || !item) {
+    console.error('Error loading target scheduled email:', loadErr);
+    return false;
+  }
+
+  const { data: user } = await supabase.from('users')
+    .select('id')
+    .eq('virtual_email', item.receiver_virtual_email)
+    .single();
+  if (!user) return false;
+
+  const { error: insErr } = await supabase.from('emails').insert([{
+    user_id: user.id,
+    sender: item.sender_virtual_email || 'team@stopfive.com',
+    receiver: item.receiver_virtual_email,
+    subject: item.subject,
+    body: item.body,
+    status: 'unread',
+    is_system_mission: false,
+    is_timeout_limit: item.is_timeout_limit === true
+  }]);
+
+  if (insErr) {
+    console.error('Error triggering mail insert:', insErr);
+    return false;
+  }
+
+  const { error: updErr } = await supabase.from('scheduled_emails')
+    .update({ status: 'sent' })
+    .eq('id', id);
+
+  return !updErr;
 };
 
 export const processScheduledEmails = async (): Promise<number> => {

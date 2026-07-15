@@ -39,6 +39,7 @@ export interface EmailMessage {
 export interface ScheduledEmail {
   id: string;
   receiverVirtualEmail: string;
+  senderVirtualEmail?: string;
   receiverName: string;
   subject: string;
   body: string;

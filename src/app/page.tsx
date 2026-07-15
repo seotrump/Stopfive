@@ -21,7 +21,9 @@ import {
   createScheduledEmail,
   cancelScheduledEmail,
   markEmailAsArchived,
-  expireEmail
+  expireEmail,
+  updateScheduledTimeoutOption,
+  triggerScheduledEmailImmediately
 } from '../lib/db';
 const ITEMS_PER_PAGE = 20;
 
@@ -331,7 +333,8 @@ export default function Home() {
           composeBody,
           scheduleDateStr,
           scheduledTimeoutLimit,
-          scheduledForceTimeout
+          scheduledForceTimeout,
+          'team@stopfive.com'
         );
         
         if (success) {
@@ -370,7 +373,8 @@ export default function Home() {
           composeBody,
           scheduleDateStr,
           scheduledTimeoutLimit,
-          false // force_timeout false
+          false, // force_timeout false
+          currentUser.virtualEmail // 셀프미션 발신자
         );
 
         if (success) {
@@ -459,6 +463,7 @@ export default function Home() {
       const receiverLower = email.receiver?.toLowerCase();
       const senderLower = email.sender?.toLowerCase();
       const userEmailLower = currentUser.virtualEmail?.toLowerCase();
+      const isSelfMissionMail = senderLower === userEmailLower && receiverLower === userEmailLower;
       const isMission = senderLower === 'team@stopfive.com' || email.isTimeoutLimit || email.isForceTimeout || email.isSystemMission;
       const elapsedMs = new Date().getTime() - new Date(email.createdAt).getTime();
       const isOver5Min = elapsedMs > 5 * 60 * 1000;
@@ -476,8 +481,8 @@ export default function Home() {
         return receiverLower === userEmailLower && email.status === 'archived';
       }
       if (userTab === 'missions') {
-        // 5분 타임아웃이 초과되어 만료(삭제) 처리된 미션 메일만 노출
-        return receiverLower === userEmailLower && isMission && isExpired;
+        // 5분 타임아웃이 초과되어 만료(삭제) 처리된 미션 메일만 노출 (셀프미션은 제외)
+        return receiverLower === userEmailLower && isMission && isExpired && !isSelfMissionMail;
       }
       if (userTab === 'sent') {
         // 본인이 발신한 메일들
@@ -1786,7 +1791,7 @@ export default function Home() {
                   <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
-                  <span>예약미션 관리</span>
+                  <span>셀프미션관리</span>
                 </button>
 
                 <button
@@ -2150,7 +2155,7 @@ export default function Home() {
                 </div>
               ) : userTab === 'self-compose' ? (
                 /* 이용자 셀프미션 작성 (전체화면 탭뷰) */
-                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
                     <button
                       onClick={() => { setUserTab('inbox'); setSelectedEmail(null); }}
@@ -2332,39 +2337,48 @@ export default function Home() {
                 </div>
               ) : userTab === 'scheduled-manage' ? (
                 /* 이용자 예약미션 관리 (전체화면 탭뷰) */
-                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8 h-[calc(100vh-56px)]">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">예약미션 관리</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">셀프미션관리</span>
                   </div>
 
                   {/* 상단 고정 리스트 헤더 */}
                   <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-[14px] font-bold text-slate-500 shrink-0 sticky top-0 z-10">
                     <div className="w-14 sm:w-20 shrink-0 pl-2">상태</div>
-                    <div className="w-16 shrink-0 pl-2">관리</div>
+                    <div className="w-28 shrink-0 pl-2">관리</div>
+                    <div className="w-32 shrink-0 pl-2">옵션</div>
                     <div className="flex-1 min-w-0 pl-2">제목</div>
                     <div className="w-44 shrink-0 pl-2 hidden md:block">예약일시</div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-                    {scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').length === 0 ? (
-                      <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
-                        <p className="text-sm font-medium">현재 등록된 예약미션이 없습니다.</p>
-                      </div>
-                    ) : (
-                      scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').map((se) => (
-                        <div key={se.id} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-[14px]">
+                  <div className="flex-1 overflow-y-auto pb-20">
+                    {(() => {
+                      const pendingMissions = scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').map(se => ({ ...se, type: 'pending', sortDate: se.scheduledAt }));
+                      const sentMissions = emails.filter((e: any) => e.sender?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase()).map((e: any) => ({ ...e, type: 'sent', sortDate: e.createdAt }));
+                      const allMissions = [...pendingMissions, ...sentMissions].sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+
+                      if (allMissions.length === 0) {
+                        return (
+                          <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                            <p className="text-sm font-medium">등록된 셀프미션이 없습니다.</p>
+                          </div>
+                        );
+                      }
+
+                      return allMissions.map(m => m.type === 'pending' ? (
+                        <div key={`pending-${m.id}`} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-[14px] border-b border-slate-100 dark:border-slate-800">
                           {/* 1. 상태 */}
                           <div className="w-14 sm:w-20 shrink-0 pl-2 text-xs font-bold flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
                             <span className="text-blue-600">대기중</span>
                           </div>
 
-                          {/* 2. 관리 */}
-                          <div className="w-16 shrink-0 pl-2">
+                          {/* 2. 관리 (취소 및 즉시발송) */}
+                          <div className="w-28 shrink-0 pl-2 flex items-center space-x-2">
                             <button
                               onClick={async () => {
                                 if (confirm("이 예약을 취소하시겠습니까?")) {
-                                  const success = await cancelScheduledEmail(se.id);
+                                  const success = await cancelScheduledEmail(m.id);
                                   if (success) {
                                     triggerToast("예약이 성공적으로 취소되었습니다.", "취소 완료");
                                     setScheduledEmails(await getScheduledEmails());
@@ -2375,27 +2389,112 @@ export default function Home() {
                             >
                               취소
                             </button>
+                            <span className="text-slate-300">|</span>
+                            <button
+                              onClick={async () => {
+                                if (confirm("대기 시간을 무시하고 지금 즉시 발송하시겠습니까?")) {
+                                  const success = await triggerScheduledEmailImmediately(m.id);
+                                  if (success) {
+                                    triggerToast("메일이 즉시 발송되었습니다.", "즉시 발송 완료");
+                                    setScheduledEmails(await getScheduledEmails());
+                                    setEmails(await getLocalEmails(currentUser.virtualEmail));
+                                  }
+                                }
+                              }}
+                              className="text-[#1A73E8] hover:text-blue-700 text-xs font-bold"
+                            >
+                              즉시발송
+                            </button>
                           </div>
 
-                          {/* 3. 제목 및 타임미션 표시 */}
+                          {/* 3. 타임미션 토글 제어 */}
+                          <div className="w-32 shrink-0 pl-2 flex items-center space-x-1.5">
+                            <input
+                              type="checkbox"
+                              checked={m.isTimeoutLimit || false}
+                              onChange={async (e) => {
+                                const updatedOption = e.target.checked;
+                                const success = await updateScheduledTimeoutOption(m.id, updatedOption);
+                                if (success) {
+                                  triggerToast(`타임미션이 ${updatedOption ? '활성화' : '비활성화'} 되었습니다.`, "옵션 변경");
+                                  setScheduledEmails(await getScheduledEmails());
+                                }
+                              }}
+                              className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer"
+                            />
+                            <span className="text-xs text-slate-500">타임미션</span>
+                          </div>
+
+                          {/* 4. 제목 및 타임미션 표시 */}
                           <div className="flex-1 min-w-0 pl-2 flex items-center gap-2">
-                            {se.isTimeoutLimit && (
+                            {m.isTimeoutLimit && (
                               <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-600 rounded text-[10px] font-bold shrink-0">
                                 타임미션
                               </span>
                             )}
                             <span className="truncate text-slate-700 dark:text-slate-200">
-                              {se.subject}
+                              {m.subject}
                             </span>
                           </div>
 
-                          {/* 4. 예약일시 */}
+                          {/* 5. 예약일시 */}
                           <div className="w-44 shrink-0 pl-2 hidden md:block text-slate-500 text-xs text-right">
-                            {formatDateTime(se.scheduledAt)}
+                            {formatDateTime(m.scheduledAt)}
                           </div>
                         </div>
-                      ))
-                    )}
+                      ) : (
+                        <div key={`sent-${m.id}`} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-[14px] border-b border-slate-100 dark:border-slate-800">
+                          {/* 1. 상태 */}
+                          <div className="w-14 sm:w-20 shrink-0 pl-2 text-xs font-bold flex items-center gap-1.5">
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.status === 'expired' || m.status === 'archived' ? 'bg-slate-400' : 'bg-emerald-500'}`}></span>
+                            <span className={m.status === 'expired' || m.status === 'archived' ? 'text-slate-500' : 'text-emerald-600'}>
+                              {m.status === 'expired' || m.status === 'archived' ? '만료됨' : '발송완료'}
+                            </span>
+                          </div>
+
+                          {/* 2. 관리 (만료 처리) */}
+                          <div className="w-28 shrink-0 pl-2 flex items-center space-x-2">
+                            {m.status !== 'expired' && m.status !== 'archived' ? (
+                              <button
+                                onClick={async (ev) => {
+                                  ev.stopPropagation();
+                                  if (confirm("이 셀프미션을 만료 처리하시겠습니까?")) {
+                                    const success = await expireEmail(m.id);
+                                    if (success) {
+                                      triggerToast("미션이 만료 처리되었습니다.", "만료 완료");
+                                      setEmails(await getLocalEmails(currentUser.virtualEmail));
+                                    }
+                                  }
+                                }}
+                                className="text-orange-500 hover:text-orange-700 text-xs font-bold"
+                              >
+                                만료처리
+                              </button>
+                            ) : (
+                              <span className="text-slate-400 text-xs font-medium">-</span>
+                            )}
+                          </div>
+
+                          {/* 3. 옵션 (빈칸) */}
+                          <div className="w-32 shrink-0 pl-2"></div>
+
+                          {/* 4. 제목 */}
+                          <div 
+                            className="flex-1 min-w-0 pl-2 flex items-center gap-2 cursor-pointer hover:underline"
+                            onClick={() => setSelectedEmail(m)}
+                          >
+                            <span className="truncate text-slate-700 dark:text-slate-200">
+                              {m.subject}
+                            </span>
+                          </div>
+
+                          {/* 5. 일시 */}
+                          <div className="w-44 shrink-0 pl-2 hidden md:block text-slate-500 text-xs text-right">
+                            {formatDateTime(m.createdAt)}
+                          </div>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
               ) : userTab === 'settings' ? (
