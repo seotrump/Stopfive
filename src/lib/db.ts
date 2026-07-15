@@ -168,17 +168,18 @@ export const sendReply = async (emailId: string, replyText: string, replySubject
   return true; // RLS UPDATE 실패 시에도 로컬스토리지 백업으로 무조건 성공 처리
 };
 
-export const sendComposeMail = async (senderVirtualEmail: string, subject: string, content: string): Promise<boolean> => {
+export const sendComposeMail = async (senderVirtualEmail: string, subject: string, content: string, isSelfMission: boolean = false, isTimeoutLimit: boolean = false): Promise<boolean> => {
   const { data: user } = await supabase.from('users').select('id').eq('virtual_email', senderVirtualEmail).single();
   if (!user) return false;
 
   const { error } = await supabase.from('emails').insert([{
     user_id: user.id,
     sender: senderVirtualEmail,
-    receiver: 'team@stopfive.com',
+    receiver: isSelfMission ? senderVirtualEmail : 'team@stopfive.com',
     subject,
     body: content,
-    status: 'unread'
+    status: 'unread',
+    is_timeout_limit: isTimeoutLimit
   }]);
   return !error;
 };

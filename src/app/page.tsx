@@ -355,7 +355,42 @@ export default function Home() {
         success = await sendAdminMailToUser(composeTo, composeSubject, composeBody, scheduledTimeoutLimit);
       }
     } else {
-      success = await sendComposeMail(currentUser.virtualEmail, composeSubject, composeBody);
+      // 일반 유저의 셀프미션인 경우
+      if (isReservationChecked) {
+        if (!scheduledDate || !scheduledHour || !scheduledMinute) {
+          triggerToast("예약 날짜와 시간을 입력해주세요.", "입력 오류");
+          return;
+        }
+        const scheduleDateStr = new Date(`${scheduledDate}T${scheduledHour}:${scheduledMinute}:00+09:00`).toISOString();
+        
+        success = await createScheduledEmail(
+          currentUser.virtualEmail,
+          currentUser.name,
+          composeSubject,
+          composeBody,
+          scheduleDateStr,
+          scheduledTimeoutLimit,
+          false // force_timeout false
+        );
+
+        if (success) {
+          setScheduledEmails(await getScheduledEmails());
+          setUserTab('scheduled-manage'); // 예약 미션 완료 후 대기열 탭으로 화면 이동
+          setSelectedEmail(null);
+          setComposeTo('');
+          setComposeSubject('');
+          setComposeBody('');
+          setIsReservationChecked(true); // 기본 체크 원복
+          setScheduledTimeoutLimit(false);
+          triggerToast("셀프 예약미션이 성공적으로 예약되었습니다.", "예약 완료");
+        } else {
+          triggerToast("예약 등록에 실패했습니다.", "오류");
+        }
+        return;
+      } else {
+        // 셀프미션 즉시 발송
+        success = await sendComposeMail(currentUser.virtualEmail, composeSubject, composeBody, true, scheduledTimeoutLimit);
+      }
     }
 
     if (success) {
@@ -363,6 +398,9 @@ export default function Home() {
       setIsComposeOpen(false);
       if (currentUser.role === 'admin' && adminTab === 'compose') {
         setAdminTab('sent');
+        setSelectedEmail(null);
+      } else if (currentUser.role !== 'admin') {
+        setUserTab('inbox'); // 일반 유저는 발송 완료 후 받은편지함으로 이동
         setSelectedEmail(null);
       }
       setComposeTo('');
@@ -2107,6 +2145,7 @@ export default function Home() {
                           </div>
                         );
                       })}
+                    </div>
                   </div>
                 </div>
               ) : userTab === 'self-compose' ? (
@@ -2159,9 +2198,8 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <form onSubmit={handleSendCompose} className="space-y-5">
+                    <form onSubmit={handleSendCompose} className="space-y-5">
                       {/* 1. 최상단 옵션 체크박스 영역 */}
                       <div className="flex flex-wrap gap-6 py-2 border-y border-slate-100 dark:border-slate-800 my-2">
                         <div className="flex items-center space-x-2">
