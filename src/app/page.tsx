@@ -55,7 +55,7 @@ const Pagination = ({ total, current, onChange }: { total: number, current: numb
 export default function Home() {
   // 사용자 및 내비게이션 상태
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userTab, setUserTab] = useState<'inbox' | 'missions' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose' | 'self-mission'>('inbox');
+  const [userTab, setUserTab] = useState<'inbox' | 'missions' | 'archive' | 'sent' | 'statistics' | 'settings' | 'self-compose' | 'scheduled-manage'>('inbox');
   const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose' | 'scheduled' | 'scheduled-manage' | 'inbox' | 'sent' | 'archive' | 'settings'>('inbox');
   const [emails, setEmails] = useState<any[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
@@ -215,10 +215,10 @@ export default function Home() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (adminTab === 'scheduled' || adminTab === 'scheduled-manage' || userTab === 'self-mission') {
+    if (adminTab === 'scheduled' || adminTab === 'scheduled-manage' || userTab === 'scheduled-manage') {
       getScheduledEmails().then(setScheduledEmails);
     }
-    if (adminTab === 'scheduled' || userTab === 'self-mission') {
+    if (adminTab === 'scheduled' || userTab === 'self-compose') {
       const freshKst = getKstNow();
       setScheduledDate(freshKst.date);
       setScheduledHour(freshKst.hour);
@@ -1613,18 +1613,7 @@ export default function Home() {
                 <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-[8px] font-bold rounded border border-slate-200 dark:border-slate-800">로컬 DB</span>
               </button>
 
-              {/* Compose 신규 메일 쓰기 버튼 (지메일 스타일 - 색상 배제 및 은은한 보더형) */}
-              <div className="px-1.5 mt-0 md:mt-2 mb-0 md:mb-2 shrink-0 flex items-center">
-                <button
-                  onClick={() => { setSelectedEmail(null); setIsComposeOpen(true); setIsMobileMenuOpen(false); setIsReservationChecked(true); }}
-                  className="ml-0 md:ml-3 pl-3 pr-6 py-2 md:py-4 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-medium rounded-2xl text-[14px] transition-all flex items-center space-x-2 md:space-x-3 shadow-sm w-fit"
-                >
-                  <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  <span>셀프미션</span>
-                </button>
-              </div>
+
 
               {/* 네비게이션 메뉴 (흑백 아이콘 및 100% 한글 명칭 통일) */}
               <nav className="flex flex-col space-y-0 px-1.5 shrink-0 pr-0">
@@ -1733,6 +1722,34 @@ export default function Home() {
                 </button>
 
 
+
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('self-compose'); setSelectedEmail(null); setIsReservationChecked(true); }}
+                  className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
+                    userTab === 'self-compose' 
+                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  <span>셀프미션</span>
+                </button>
+
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('scheduled-manage'); setSelectedEmail(null); }}
+                  className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
+                    userTab === 'scheduled-manage' 
+                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <span>예약미션 관리</span>
+                </button>
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setUserTab('settings'); setSelectedEmail(null); }}
@@ -2090,16 +2107,14 @@ export default function Home() {
                           </div>
                         );
                       })}
-                    </div>
                   </div>
                 </div>
-              ) : userTab === 'compose' ? (
-                /* 편지쓰기 화면 - 이메일 상세 보기와 동일한 헤더 포맷, 본문 없이 바로 REPLY BOX */
-                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
-                  {/* 이메일 상세 보기와 동일한 상단 Back 바 */}
+              ) : userTab === 'self-compose' ? (
+                /* 이용자 셀프미션 작성 (전체화면 탭뷰) */
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8">
                   <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center shrink-0 bg-transparent">
                     <button
-                      onClick={() => setUserTab('inbox')}
+                      onClick={() => { setUserTab('inbox'); setSelectedEmail(null); }}
                       className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center space-x-1"
                     >
                       <span>← Back to inbox</span>
@@ -2107,77 +2122,242 @@ export default function Home() {
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-                    {/* 이메일 상세 보기와 동일한 제목 영역 */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-5 space-y-4">
                       <div className="flex items-center space-x-3">
                         <h2 className="text-2xl font-bold tracking-tight text-[#202124] dark:text-white leading-tight">
-                          새 편지 쓰기
+                          셀프미션 작성기
                         </h2>
                         <span className="px-2 py-0.5 bg-[#f1f3f4] dark:bg-slate-800 text-[#5f6368] dark:text-slate-450 text-[10px] font-medium rounded border border-slate-200 dark:border-slate-700">
-                          편지쓰기
+                          셀프 발송
                         </span>
                       </div>
 
-                      {/* 이메일 상세 보기와 동일한 발신자 헤더 */}
+                      {/* 발신자 헤더 */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
-                            {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+                            {(currentUser?.name?.[0] || 'U').toUpperCase()}
                           </div>
                           <div className="space-y-0.5">
                             <div className="text-[13px] text-[#202124] dark:text-white">
-                              <span className="font-bold">{currentUser.name}</span>
-                              <span className="text-slate-400 text-xs font-light ml-2">&lt;{currentUser.email}&gt;</span>
+                              <span className="font-bold">{currentUser?.name}</span>
+                              <span className="text-slate-400 text-xs font-light ml-2">&lt;{currentUser?.virtualEmail}&gt;</span>
                             </div>
                             <div className="text-[11px] text-slate-400">
                               <span>To: </span>
-                              <span className="font-medium text-slate-600 dark:text-slate-350">team@stopfive.com</span>
+                              <span className="font-medium text-slate-600 dark:text-slate-350">
+                                {currentUser?.virtualEmail} (나에게)
+                              </span>
                             </div>
                           </div>
                         </div>
-                        <div className="text-[11px] text-slate-400 hidden sm:block">
+                        <div className="text-[11px] text-slate-400">
                           {new Date().toLocaleString('ko-KR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            weekday: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
+                            year: 'numeric', month: 'long', day: 'numeric',
+                            weekday: 'short', hour: '2-digit', minute: '2-digit'
                           })}
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* 본문 없이 바로 REPLY BOX (이메일 상세 보기의 REPLY BOX와 동일한 스타일) */}
-                    <form onSubmit={(e) => { e.preventDefault(); handleSendCompose(e); }} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
-                          WRITE MESSAGE (여기에 보내실 내용을 입력하세요)
-                        </label>
-                        <textarea
-                          value={composeBody}
-                          onChange={(e) => setComposeBody(e.target.value)}
-                          placeholder="미션을 완료했다면 짧은 답장을 입력하고 Send를 눌러주세요. (예: 완료했습니다! / 기지개 켜니 아주 개운합니다.)"
-                          className="w-full h-32 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-450 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
+                  <form onSubmit={handleSendCompose} className="space-y-5">
+                      {/* 1. 최상단 옵션 체크박스 영역 */}
+                      <div className="flex flex-wrap gap-6 py-2 border-y border-slate-100 dark:border-slate-800 my-2">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            id="user_reservation"
+                            type="checkbox"
+                            checked={isReservationChecked}
+                            onChange={(e) => setIsReservationChecked(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="user_reservation" className="text-sm font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
+                            예약미션
+                          </label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            id="user_timeout"
+                            type="checkbox"
+                            checked={scheduledTimeoutLimit}
+                            onChange={(e) => setScheduledTimeoutLimit(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="user_timeout" className="text-sm font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
+                            타임미션
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* 2. 받는 사람 (고정) */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">받는 사람</label>
+                        <input
+                          type="text"
+                          value={`${currentUser?.name} (${currentUser?.virtualEmail})`}
+                          disabled
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 dark:border-slate-700/50 rounded-xl text-sm text-slate-500 dark:text-slate-400 font-semibold cursor-not-allowed"
+                        />
+                      </div>
+
+                      {/* 3. 예약 날짜 및 시간 선택 (예약미션 체크 시에만 표시) */}
+                      {isReservationChecked && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 animate-fadeIn">
+                          {/* 예약 날짜 */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 날짜</label>
+                            <input
+                              type="date"
+                              value={scheduledDate}
+                              onChange={(e) => setScheduledDate(e.target.value)}
+                              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                              required
+                            />
+                          </div>
+
+                          {/* 예약 시간 */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 시간</label>
+                            <div className="flex space-x-2">
+                              <select
+                                value={scheduledHour}
+                                onChange={(e) => setScheduledHour(e.target.value)}
+                                className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                                required
+                              >
+                                {Array.from({ length: 24 }, (_, i) => {
+                                  const h = i.toString().padStart(2, '0');
+                                  return <option key={h} value={h}>{h}시</option>;
+                                })}
+                              </select>
+                              <select
+                                value={scheduledMinute}
+                                onChange={(e) => setScheduledMinute(e.target.value)}
+                                className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                                required
+                              >
+                                {Array.from({ length: 60 }, (_, i) => {
+                                  const m = i.toString().padStart(2, '0');
+                                  return <option key={m} value={m}>{m}분</option>;
+                                })}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 4. 제목 */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">제목</label>
+                        <input
+                          type="text"
+                          value={composeSubject}
+                          onChange={(e) => setComposeSubject(e.target.value)}
+                          placeholder="제목을 입력하세요"
+                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
                           required
                         />
                       </div>
+
+                      {/* 5. 본문 */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">WRITE MESSAGE (본문 내용)</label>
+                        <textarea
+                          value={composeBody}
+                          onChange={(e) => setComposeBody(e.target.value)}
+                          placeholder="본문 내용을 자유롭게 작성하세요..."
+                          className="w-full h-40 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
+                          required
+                        />
+                      </div>
+
                       <div className="flex justify-start">
                         <button
                           type="submit"
                           onClick={() => {
-                            setComposeTo('team@stopfive.com');
-                            setComposeSubject('사용자 편지 문의');
+                            if (currentUser) {
+                              setComposeTo(currentUser.virtualEmail);
+                            }
                           }}
                           className="px-6 py-2 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white border border-slate-300 dark:border-slate-700 font-bold rounded-full text-xs transition-all shadow-none flex items-center gap-1.5"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                           </svg>
-                          <span>답장</span>
+                          <span>{isReservationChecked ? '예약 등록' : '즉시 발송'}</span>
                         </button>
                       </div>
                     </form>
+                  </div>
+                </div>
+              ) : userTab === 'scheduled-manage' ? (
+                /* 이용자 예약미션 관리 (전체화면 탭뷰) */
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 -m-4 md:-m-8 h-[calc(100vh-56px)]">
+                  <div className="h-12 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-transparent">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">예약미션 관리</span>
+                  </div>
+
+                  {/* 상단 고정 리스트 헤더 */}
+                  <div className="flex items-center px-4 md:px-8 h-10 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 text-[14px] font-bold text-slate-500 shrink-0 sticky top-0 z-10">
+                    <div className="w-14 sm:w-20 shrink-0 pl-2">상태</div>
+                    <div className="w-16 shrink-0 pl-2">관리</div>
+                    <div className="flex-1 min-w-0 pl-2">제목</div>
+                    <div className="w-44 shrink-0 pl-2 hidden md:block">예약일시</div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').length === 0 ? (
+                      <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                        <p className="text-sm font-medium">현재 등록된 예약미션이 없습니다.</p>
+                      </div>
+                    ) : (
+                      scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').map((se) => (
+                        <div key={se.id} className="h-10 flex items-center px-4 md:px-8 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-[14px]">
+                          {/* 1. 상태 */}
+                          <div className="w-14 sm:w-20 shrink-0 pl-2 text-xs font-bold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+                            <span className="text-blue-600">대기중</span>
+                          </div>
+
+                          {/* 2. 관리 */}
+                          <div className="w-16 shrink-0 pl-2">
+                            <button
+                              onClick={async () => {
+                                if (confirm("이 예약을 취소하시겠습니까?")) {
+                                  const success = await cancelScheduledEmail(se.id);
+                                  if (success) {
+                                    triggerToast("예약이 성공적으로 취소되었습니다.", "취소 완료");
+                                    setScheduledEmails(await getScheduledEmails());
+                                  }
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-700 text-xs font-bold"
+                            >
+                              취소
+                            </button>
+                          </div>
+
+                          {/* 3. 제목 및 타임미션 표시 */}
+                          <div className="flex-1 min-w-0 pl-2 flex items-center gap-2">
+                            {se.isTimeoutLimit && (
+                              <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-600 rounded text-[10px] font-bold shrink-0">
+                                타임미션
+                              </span>
+                            )}
+                            <span className="truncate text-slate-700 dark:text-slate-200">
+                              {se.subject}
+                            </span>
+                          </div>
+
+                          {/* 4. 예약일시 */}
+                          <div className="w-44 shrink-0 pl-2 hidden md:block text-slate-500 text-xs text-right">
+                            {formatDateTime(se.scheduledAt)}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               ) : userTab === 'settings' ? (
@@ -2380,57 +2560,6 @@ export default function Home() {
                     )}
                   </div>
                   <Pagination total={userFiltered.length} current={currentPage} onChange={setCurrentPage} />
-
-                  {/* 📂 미션관리함 탭일 경우 대기 중인 셀프 예약미션 목록 노출 */}
-                  {userTab === 'missions' && (
-                    <div className="mt-8 border-t border-slate-200 dark:border-slate-850 pt-6 px-4 md:px-8 pb-12 shrink-0">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">⏳ 대기 중인 셀프 예약미션</h3>
-                          <p className="text-[11px] text-slate-400 mt-0.5">지정된 예약 시각에 나의 받은편지함으로 메일이 배달됩니다.</p>
-                        </div>
-                        <span className="text-xs px-2.5 py-0.5 bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-slate-500 rounded-full font-bold">
-                          {scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').length}개 대기
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50 dark:bg-slate-800/20 border border-border rounded-2xl overflow-hidden divide-y divide-slate-150 dark:divide-slate-800">
-                        {scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').length === 0 ? (
-                          <div className="py-8 text-center text-xs text-slate-400">
-                            대기 중인 예약미션이 없습니다. 좌측 상단 [셀프미션] 버튼을 눌러 등록해 보세요.
-                          </div>
-                        ) : (
-                          scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').map((se) => (
-                            <div key={se.id} className="p-4 flex items-center justify-between hover:bg-slate-100/50 dark:hover:bg-slate-850/20 transition-all text-xs">
-                              <div className="space-y-1 min-w-0 pr-4 flex-1">
-                                <div className="font-bold text-slate-800 dark:text-slate-250 truncate">{se.subject}</div>
-                                <div className="text-[10px] text-slate-400 flex items-center gap-3">
-                                  <span>📅 예약일시: {formatDateTime(se.scheduledAt)}</span>
-                                  {se.isTimeoutLimit && (
-                                    <span className="px-1.5 py-0.5 bg-red-50 dark:bg-red-950/40 text-red-600 rounded text-[9px] font-bold">타임미션(5분제한)</span>
-                                  )}
-                                </div>
-                              </div>
-                              <button
-                                onClick={async () => {
-                                  if (confirm("이 예약을 취소하시겠습니까?")) {
-                                    const success = await cancelScheduledEmail(se.id);
-                                    if (success) {
-                                      triggerToast("예약이 취소되었습니다.", "취소 완료");
-                                      setScheduledEmails(await getScheduledEmails());
-                                    }
-                                  }
-                                }}
-                                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-600 font-bold rounded-full transition-all text-[11px] cursor-pointer"
-                              >
-                                예약 취소
-                              </button>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </main>
@@ -2438,173 +2567,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* C. Compose 메일 쓰기 팝업 모달 (셀프미션 & 관리자 메일 발송 통합) */}
-      {isComposeOpen && (
-        <div className="fixed bottom-0 right-0 md:right-12 w-full md:w-[520px] max-w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-fade-in-up">
-          <div className="h-10 bg-slate-950 text-white px-4 flex items-center justify-between shrink-0">
-            <span className="text-xs font-semibold">{currentUser?.role === 'admin' ? '관리자 발송' : '셀프미션 작성'}</span>
-            <button onClick={() => setIsComposeOpen(false)} className="hover:bg-white/20 p-1 rounded transition-all">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
 
-          <form onSubmit={handleSendCompose} className="flex-1 flex flex-col p-4 space-y-3.5">
-            {/* 1. 최상단 옵션 체크박스 영역 */}
-            <div className="flex flex-wrap gap-4 py-1.5 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center space-x-2">
-                <input
-                  id="modal_reservation"
-                  type="checkbox"
-                  checked={isReservationChecked}
-                  onChange={(e) => setIsReservationChecked(e.target.checked)}
-                  className="w-3.5 h-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="modal_reservation" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                  예약미션
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  id="modal_timeout"
-                  type="checkbox"
-                  checked={scheduledTimeoutLimit}
-                  onChange={(e) => {
-                    setScheduledTimeoutLimit(e.target.checked);
-                    if (!e.target.checked) setScheduledForceTimeout(false);
-                  }}
-                  className="w-3.5 h-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="modal_timeout" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                  타임미션
-                </label>
-              </div>
-
-              {currentUser?.role === 'admin' && scheduledTimeoutLimit && (
-                <div className="flex items-center space-x-1.5 transition-all duration-300">
-                  <input
-                    id="modal_force_timeout"
-                    type="checkbox"
-                    checked={scheduledForceTimeout}
-                    onChange={(e) => setScheduledForceTimeout(e.target.checked)}
-                    className="w-3.5 h-3.5 text-red-600 border-slate-350 rounded focus:ring-red-500"
-                  />
-                  <label htmlFor="modal_force_timeout" className="text-[10px] font-bold text-red-600 dark:text-red-400 cursor-pointer">
-                    ⚡ 강제 만료
-                  </label>
-                </div>
-              )}
-            </div>
-
-            {/* 2. 받는 사람 (To:) */}
-            <div className="flex items-center border-b border-slate-200 dark:border-slate-800 pb-2">
-              <span className="text-xs text-slate-400 w-16 shrink-0">To:</span>
-              {currentUser?.role === 'admin' ? (
-                <select
-                  value={composeTo}
-                  onChange={(e) => setComposeTo(e.target.value)}
-                  className="w-full text-xs bg-transparent focus:outline-none dark:text-white dark:bg-slate-800 border-none cursor-pointer"
-                  required
-                >
-                  <option value="" className="text-slate-400">발송 대상 유저 선택</option>
-                  {allUsers.filter(u => u.role !== 'admin').map(u => (
-                    <option key={u.id} value={u.virtualEmail}>{u.name} ({u.virtualEmail})</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  value={currentUser?.virtualEmail || ''}
-                  disabled
-                  className="w-full text-xs bg-transparent focus:outline-none text-slate-500 cursor-not-allowed font-semibold"
-                />
-              )}
-            </div>
-
-            {/* 3. 예약시각 선택 드롭다운 (예약미션 활성화 시 동적 표기) */}
-            {isReservationChecked && (
-              <div className="grid grid-cols-2 gap-2 pb-1 border-b border-slate-100 dark:border-slate-800/80 animate-fadeIn">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 block">예약 날짜</label>
-                  <input
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs dark:bg-slate-800 text-[#202124] dark:text-white"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 block">예약 시간</label>
-                  <div className="flex space-x-1">
-                    <select
-                      value={scheduledHour}
-                      onChange={(e) => setScheduledHour(e.target.value)}
-                      className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs dark:bg-slate-800 text-slate-800 dark:text-white"
-                      required
-                    >
-                      {Array.from({ length: 24 }, (_, i) => {
-                        const h = i.toString().padStart(2, '0');
-                        return <option key={h} value={h}>{h}시</option>;
-                      })}
-                    </select>
-                    <select
-                      value={scheduledMinute}
-                      onChange={(e) => setScheduledMinute(e.target.value)}
-                      className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs dark:bg-slate-800 text-slate-800 dark:text-white"
-                      required
-                    >
-                      {Array.from({ length: 60 }, (_, i) => {
-                        const m = i.toString().padStart(2, '0');
-                        return <option key={m} value={m}>{m}분</option>;
-                      })}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 4. 제목 */}
-            <div className="flex items-center border-b border-slate-200 dark:border-slate-800 pb-2">
-              <span className="text-xs text-slate-400 w-16 shrink-0">Subject:</span>
-              <input
-                type="text"
-                value={composeSubject}
-                onChange={(e) => setComposeSubject(e.target.value)}
-                placeholder="제목을 입력하세요"
-                className="w-full text-xs bg-transparent focus:outline-none dark:text-white"
-                required
-              />
-            </div>
-
-            {/* 5. 본문 */}
-            <textarea
-              value={composeBody}
-              onChange={(e) => setComposeBody(e.target.value)}
-              placeholder="미션 본문 내용을 자유롭게 작성하세요..."
-              className="flex-1 h-44 text-xs p-3 focus:outline-none resize-none dark:bg-slate-800 dark:text-white rounded-lg border border-slate-200 dark:border-slate-700"
-              required
-            />
-
-            {/* 6. 발송/등록 버튼 */}
-            <div className="flex justify-end pt-1">
-              <button
-                type="submit"
-                onClick={() => {
-                  if (currentUser && currentUser.role !== 'admin') {
-                    setComposeTo(currentUser.virtualEmail);
-                  }
-                }}
-                className="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-bold rounded-full text-xs transition-all shadow-sm"
-              >
-                {isReservationChecked ? '예약 등록' : '즉시 발송'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* D. 체험 코스 가이드 오버레이 팝업 모달 */}
       {isCourseGuideOpen && (
