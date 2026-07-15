@@ -142,9 +142,17 @@ export const sendReply = async (emailId: string, replyText: string, replySubject
   const { data: originalEmail } = await supabase.from('emails').select('receiver, sender, subject, user_id').eq('id', emailId).single();
   
   if (originalEmail) {
+    const isSelfMission = originalEmail.sender?.toLowerCase() === originalEmail.receiver?.toLowerCase();
     const isReplyFromAdmin = originalEmail.receiver === 'team@stopfive.com';
-    const newSender = isReplyFromAdmin ? 'team@stopfive.com' : originalEmail.receiver;
-    const newReceiver = isReplyFromAdmin ? originalEmail.sender : 'team@stopfive.com';
+    
+    let newSender = isReplyFromAdmin ? 'team@stopfive.com' : originalEmail.receiver;
+    let newReceiver = isReplyFromAdmin ? originalEmail.sender : 'team@stopfive.com';
+
+    // 셀프미션인 경우 송수신자가 모두 본인
+    if (isSelfMission) {
+      newSender = originalEmail.receiver;
+      newReceiver = originalEmail.receiver;
+    }
 
     await supabase.from('emails').insert([{
       user_id: originalEmail.user_id,
