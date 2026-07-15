@@ -1615,6 +1615,19 @@ export default function Home() {
 
 
 
+              {/* Compose 신규 메일 쓰기 버튼 (지메일 스타일 - 색상 배제 및 은은한 보더형) */}
+              <div className="px-1.5 mt-0 md:mt-2 mb-0 md:mb-2 shrink-0 flex items-center">
+                <button
+                  onClick={() => { setSelectedEmail(null); setUserTab('self-compose'); setIsMobileMenuOpen(false); setIsReservationChecked(true); }}
+                  className="ml-0 md:ml-3 pl-3 pr-6 py-2 md:py-4 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-[#202124] dark:text-white font-medium rounded-2xl text-[14px] transition-all flex items-center space-x-2 md:space-x-3 shadow-sm w-fit"
+                >
+                  <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  <span>셀프미션</span>
+                </button>
+              </div>
+
               {/* 네비게이션 메뉴 (흑백 아이콘 및 100% 한글 명칭 통일) */}
               <nav className="flex flex-col space-y-0 px-1.5 shrink-0 pr-0">
                 <button
@@ -1723,19 +1736,6 @@ export default function Home() {
 
 
 
-                <button
-                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('self-compose'); setSelectedEmail(null); setIsReservationChecked(true); }}
-                  className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
-                    userTab === 'self-compose' 
-                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
-                  }`}
-                >
-                  <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  <span>셀프미션</span>
-                </button>
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setUserTab('scheduled-manage'); setSelectedEmail(null); }}
