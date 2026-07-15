@@ -55,7 +55,7 @@ const Pagination = ({ total, current, onChange }: { total: number, current: numb
 export default function Home() {
   // 사용자 및 내비게이션 상태
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userTab, setUserTab] = useState<'inbox' | 'missions' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose'>('inbox');
+  const [userTab, setUserTab] = useState<'inbox' | 'missions' | 'archive' | 'sent' | 'statistics' | 'settings' | 'compose' | 'self-mission'>('inbox');
   const [adminTab, setAdminTab] = useState<'users' | 'statistics' | 'compose' | 'scheduled' | 'scheduled-manage' | 'inbox' | 'sent' | 'archive' | 'settings'>('inbox');
   const [emails, setEmails] = useState<any[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
@@ -215,16 +215,16 @@ export default function Home() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (adminTab === 'scheduled' || adminTab === 'scheduled-manage') {
+    if (adminTab === 'scheduled' || adminTab === 'scheduled-manage' || userTab === 'self-mission') {
       getScheduledEmails().then(setScheduledEmails);
     }
-    if (adminTab === 'scheduled') {
+    if (adminTab === 'scheduled' || userTab === 'self-mission') {
       const freshKst = getKstNow();
       setScheduledDate(freshKst.date);
       setScheduledHour(freshKst.hour);
       setScheduledMinute(freshKst.minute);
     }
-  }, [adminTab]);
+  }, [adminTab, userTab]);
 
   // 토스트 도우미
   const triggerToast = (message: string, title?: string) => {
@@ -1733,6 +1733,20 @@ export default function Home() {
                 </button>
 
                 <button
+                  onClick={() => { setIsMobileMenuOpen(false); setUserTab('self-mission'); setSelectedEmail(null); }}
+                  className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
+                    userTab === 'self-mission' 
+                      ? 'bg-[#E8EAED] text-[#202124] dark:bg-slate-800 dark:text-white font-black' 
+                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
+                  }`}
+                >
+                  <svg className="w-4 h-4 text-slate-500 mr-2 md:mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>셀프미션</span>
+                </button>
+
+                <button
                   onClick={() => { setIsMobileMenuOpen(false); setUserTab('settings'); setSelectedEmail(null); }}
                   className={`w-auto md:w-full flex items-center px-4 md:px-6 h-10 rounded-full text-[14px] transition-all shrink-0 ${
                     userTab === 'settings' 
@@ -2170,6 +2184,182 @@ export default function Home() {
                         </button>
                       </div>
                     </form>
+                  </div>
+                </div>
+              ) : userTab === 'self-mission' ? (
+                /* 셀프미션 예약 및 대기열 화면 */
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 max-w-4xl mx-auto w-full">
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight">셀프미션</h1>
+                    <p className="text-sm text-slate-400 mt-1">자기 자신에게 원하는 시각에 미션 메일을 예약 발송합니다.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* 왼쪽: 셀프미션 작성 폼 */}
+                    <div className="bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl h-fit">
+                      <h2 className="text-sm font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wider mb-4">새 셀프미션 예약</h2>
+                      
+                      <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!composeSubject || !composeBody || !scheduledDate || !scheduledHour || !scheduledMinute) {
+                          triggerToast("모든 항목을 입력해 주세요.", "입력 오류");
+                          return;
+                        }
+
+                        // 한국 시각 기준으로 ISO 변환
+                        const scheduleDateStr = new Date(`${scheduledDate}T${scheduledHour}:${scheduledMinute}:00+09:00`).toISOString();
+                        
+                        const success = await createScheduledEmail(
+                          currentUser.virtualEmail,
+                          currentUser.name,
+                          composeSubject,
+                          composeBody,
+                          scheduleDateStr,
+                          scheduledTimeoutLimit, // 5분제한 여부
+                          false // 강제만료 여부
+                        );
+
+                        if (success) {
+                          triggerToast("셀프미션 예약이 등록되었습니다.", "등록 완료");
+                          setComposeSubject('');
+                          setComposeBody('');
+                          setScheduledTimeoutLimit(false);
+                          // 예약 목록 새로고침
+                          setScheduledEmails(await getScheduledEmails());
+                        } else {
+                          triggerToast("예약 등록에 실패했습니다. (RLS/DB 에러)", "등록 실패");
+                        }
+                      }} className="space-y-4">
+                        
+                        {/* 예약 날짜 및 시간 선택 */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-455 block">예약 날짜</label>
+                            <input
+                              type="date"
+                              value={scheduledDate}
+                              onChange={(e) => setScheduledDate(e.target.value)}
+                              className="w-full p-2.5 border border-border rounded-xl text-xs dark:bg-slate-800"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-455 block">예약 시간</label>
+                            <div className="flex space-x-1">
+                              <select
+                                value={scheduledHour}
+                                onChange={(e) => setScheduledHour(e.target.value)}
+                                className="flex-1 p-2.5 border border-border rounded-xl text-xs dark:bg-slate-800 text-slate-800 dark:text-white"
+                                required
+                              >
+                                {Array.from({ length: 24 }, (_, i) => {
+                                  const h = i.toString().padStart(2, '0');
+                                  return <option key={h} value={h}>{h}시</option>;
+                                })}
+                              </select>
+                              <select
+                                value={scheduledMinute}
+                                onChange={(e) => setScheduledMinute(e.target.value)}
+                                className="flex-1 p-2.5 border border-border rounded-xl text-xs dark:bg-slate-800 text-slate-800 dark:text-white"
+                                required
+                              >
+                                {Array.from({ length: 60 }, (_, i) => {
+                                  const m = i.toString().padStart(2, '0');
+                                  return <option key={m} value={m}>{m}분</option>;
+                                })}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 5분 제한 체크박스 */}
+                        <div className="flex items-center space-x-2 py-1">
+                          <input
+                            id="self_timeout_limit"
+                            type="checkbox"
+                            checked={scheduledTimeoutLimit}
+                            onChange={(e) => setScheduledTimeoutLimit(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="self_timeout_limit" className="text-xs font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
+                            5분제한 (체크 시 수신 후 5분 내 미답장하면 만료됨)
+                          </label>
+                        </div>
+
+                        {/* 제목 */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-455 block">제목</label>
+                          <input
+                            type="text"
+                            value={composeSubject}
+                            onChange={(e) => setComposeSubject(e.target.value)}
+                            placeholder="나에게 보낼 미션 제목"
+                            className="w-full p-2.5 border border-border rounded-xl text-xs dark:bg-slate-800"
+                            required
+                          />
+                        </div>
+
+                        {/* 본문 */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-455 block">본문 내용</label>
+                          <textarea
+                            value={composeBody}
+                            onChange={(e) => setComposeBody(e.target.value)}
+                            placeholder="미션 내용을 작성하세요..."
+                            className="w-full h-32 p-3 border border-border rounded-xl text-xs dark:bg-slate-800 resize-none"
+                            required
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="w-full py-2.5 bg-primary hover:bg-blue-600 text-white font-semibold rounded-xl text-xs transition-all"
+                        >
+                          셀프미션 등록
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* 오른쪽: 예약 대기열 목록 */}
+                    <div className="bg-slate-50 dark:bg-slate-800/40 border border-border p-6 rounded-2xl flex flex-col min-h-[300px]">
+                      <h2 className="text-sm font-bold text-slate-700 dark:text-slate-350 uppercase tracking-wider mb-4">대기 중인 셀프 예약 목록</h2>
+                      
+                      <div className="flex-1 overflow-y-auto space-y-2 divide-y divide-slate-100 dark:divide-slate-800">
+                        {scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').length === 0 ? (
+                          <div className="h-full flex items-center justify-center text-slate-400 text-xs py-12">
+                            대기 중인 셀프미션이 없습니다.
+                          </div>
+                        ) : (
+                          scheduledEmails.filter(se => se.receiverVirtualEmail?.toLowerCase() === currentUser.virtualEmail?.toLowerCase() && se.status === 'pending').map((se) => (
+                            <div key={se.id} className="pt-2 pb-2 flex items-center justify-between text-xs">
+                              <div className="space-y-1 flex-1 min-w-0 pr-4">
+                                <div className="font-bold text-slate-800 dark:text-slate-200 truncate">{se.subject}</div>
+                                <div className="text-[10px] text-slate-450 flex items-center gap-2">
+                                  <span>📅 {formatDateTime(se.scheduledAt)}</span>
+                                  {se.is_timeout_limit && (
+                                    <span className="px-1 bg-red-50 dark:bg-red-950/40 text-red-600 text-[9px] rounded font-bold">5분제한</span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  if (confirm("이 예약을 취소하시겠습니까?")) {
+                                    const success = await cancelScheduledEmail(se.id);
+                                    if (success) {
+                                      triggerToast("예약이 취소되었습니다.", "취소 완료");
+                                      setScheduledEmails(await getScheduledEmails());
+                                    }
+                                  }
+                                }}
+                                className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-lg transition-all"
+                              >
+                                취소
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : userTab === 'settings' ? (
