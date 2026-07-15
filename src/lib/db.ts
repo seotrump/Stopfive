@@ -195,7 +195,7 @@ export const markEmailAsArchived = async (emailId: string): Promise<boolean> => 
 };
 
 // 추가된 Mock Stub 함수들
-export const sendAdminMailToUser = async (receiverVirtualEmail: string, subject: string, content: string): Promise<boolean> => {
+export const sendAdminMailToUser = async (receiverVirtualEmail: string, subject: string, content: string, isTimeoutLimit?: boolean): Promise<boolean> => {
   const { data: user } = await supabase.from('users').select('id').eq('virtual_email', receiverVirtualEmail).single();
   if (!user) return false;
 
@@ -203,10 +203,11 @@ export const sendAdminMailToUser = async (receiverVirtualEmail: string, subject:
     user_id: user.id,
     sender: 'team@stopfive.com',
     receiver: receiverVirtualEmail,
-    subject: `Re: ${subject.replace(/^Re:\s*/, '')}`,
+    subject: subject,
     body: content,
     status: 'unread',
-    is_system_mission: false
+    is_system_mission: false,
+    is_timeout_limit: isTimeoutLimit === true
   }]);
   return !error;
 };

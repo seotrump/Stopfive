@@ -106,6 +106,8 @@ export default function Home() {
   const [, setForceRender] = useState(0); // 10초마다 강제 리렌더링 (만료 계산 재실행용)
   const [selectedScheduledEmail, setSelectedScheduledEmail] = useState<any>(null);
 
+  const [isReservationChecked, setIsReservationChecked] = useState(false);
+
   useEffect(() => {
     if (currentUser) {
       setUseTimeoutMissionsSetting(currentUser.useTimeoutMissions ?? true);
@@ -312,7 +314,46 @@ export default function Home() {
     
     let success = false;
     if (currentUser.role === 'admin') {
-      success = await sendAdminMailToUser(composeTo, composeSubject, composeBody);
+      if (isReservationChecked) {
+        // 예약 발송 등록
+        if (!scheduledDate || !scheduledHour || !scheduledMinute) {
+          triggerToast("예약 날짜와 시간을 입력해주세요.", "입력 오류");
+          return;
+        }
+        const scheduleDateStr = new Date(`${scheduledDate}T${scheduledHour}:${scheduledMinute}:00+09:00`).toISOString();
+        const targetUser = allUsers.find(u => u.virtualEmail === composeTo);
+        const receiverName = targetUser ? targetUser.name : 'Unknown';
+        
+        success = await createScheduledEmail(
+          composeTo,
+          receiverName,
+          composeSubject,
+          composeBody,
+          scheduleDateStr,
+          scheduledTimeoutLimit,
+          scheduledForceTimeout
+        );
+        
+        if (success) {
+          setScheduledEmails(await getScheduledEmails());
+          setIsComposeOpen(false);
+          setAdminTab('scheduled-manage');
+          setSelectedEmail(null);
+          setComposeTo('');
+          setComposeSubject('');
+          setComposeBody('');
+          setIsReservationChecked(false);
+          setScheduledTimeoutLimit(false);
+          setScheduledForceTimeout(false);
+          triggerToast("예약 미션이 성공적으로 등록되었습니다.", "예약 등록 완료");
+        } else {
+          triggerToast("예약 등록에 실패했습니다. (DB 오류)", "예약 실패");
+        }
+        return;
+      } else {
+        // 즉시 발송
+        success = await sendAdminMailToUser(composeTo, composeSubject, composeBody, scheduledTimeoutLimit);
+      }
     } else {
       success = await sendComposeMail(currentUser.virtualEmail, composeSubject, composeBody);
     }
@@ -327,6 +368,9 @@ export default function Home() {
       setComposeTo('');
       setComposeSubject('');
       setComposeBody('');
+      setIsReservationChecked(false);
+      setScheduledTimeoutLimit(false);
+      setScheduledForceTimeout(false);
       triggerToast("작성하신 메일이 성공적으로 전송되었습니다.", "메일 발송 완료");
     } else {
       triggerToast("메일 전송에 실패했습니다. 세션을 확인해 주세요.");
@@ -874,19 +918,6 @@ export default function Home() {
                   <span>통계 관리</span>
                 </button>
 
-                <button
-                  onClick={() => { setIsMobileMenuOpen(false); setAdminTab('scheduled'); setSelectedEmail(null); }}
-                  className={`w-auto md:w-[calc(100%-16px)] flex items-center px-4 md:pl-6 md:pr-4 h-8 rounded-full md:rounded-l-none md:rounded-r-full text-[14px] transition-all shrink-0 ${
-                    adminTab === 'scheduled' 
-                      ? 'bg-[#E8F0FE] text-[#1A73E8] font-bold' 
-                      : 'hover:bg-[#F1F3F4]/70 dark:hover:bg-slate-900 text-[#202124] dark:text-slate-350 font-medium'
-                  }`}
-                >
-                  <svg className="w-5 h-5 mr-2 md:mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span>미션 예약</span>
-                </button>
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setAdminTab('scheduled-manage'); setSelectedEmail(null); }}
@@ -1339,6 +1370,103 @@ export default function Home() {
                         />
                       </div>
 
+                      {/* 예약 & 5분 미션 제어 옵션 */}
+                      <div className="space-y-4 py-4 border-y border-slate-100 dark:border-slate-800/80 my-2">
+                        <div className="flex flex-wrap gap-6">
+                          {/* 1. 미션예약 체크박스 */}
+                          <div className="flex items-center space-x-2">
+                            <input
+                              id="is_reservation"
+                              type="checkbox"
+                              checked={isReservationChecked}
+                              onChange={(e) => setIsReservationChecked(e.target.checked)}
+                              className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor="is_reservation" className="text-sm font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
+                              미션예약
+                            </label>
+                          </div>
+
+                          {/* 2. 5분미션 체크박스 */}
+                          <div className="flex items-center space-x-2">
+                            <input
+                              id="timeout_limit"
+                              type="checkbox"
+                              checked={scheduledTimeoutLimit}
+                              onChange={(e) => {
+                                setScheduledTimeoutLimit(e.target.checked);
+                                if (!e.target.checked) setScheduledForceTimeout(false);
+                              }}
+                              className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor="timeout_limit" className="text-sm font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
+                              5분미션
+                            </label>
+                          </div>
+
+                          {scheduledTimeoutLimit && (
+                            <div className="flex items-center space-x-2 transition-all duration-300">
+                              <input
+                                id="force_timeout"
+                                type="checkbox"
+                                checked={scheduledForceTimeout}
+                                onChange={(e) => setScheduledForceTimeout(e.target.checked)}
+                                className="w-4 h-4 text-red-600 border-slate-350 rounded focus:ring-red-500"
+                              />
+                              <label htmlFor="force_timeout" className="text-xs font-semibold text-red-600 dark:text-red-400 cursor-pointer">
+                                ⚡ 강제 만료 적용 (유저 설정을 무시하고 무조건 5분 제한 적용)
+                              </label>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 미션예약 체크 시에만 날짜 및 시간 선택기 오픈 */}
+                        {isReservationChecked && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-dashed border-slate-100 dark:border-slate-800/60 animate-fadeIn">
+                            {/* 예약 날짜 */}
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 날짜</label>
+                              <input
+                                type="date"
+                                value={scheduledDate}
+                                onChange={(e) => setScheduledDate(e.target.value)}
+                                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                                required
+                              />
+                            </div>
+
+                            {/* 예약 시간 */}
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 시간</label>
+                              <div className="flex space-x-2">
+                                <select
+                                  value={scheduledHour}
+                                  onChange={(e) => setScheduledHour(e.target.value)}
+                                  className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                                  required
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => {
+                                    const h = i.toString().padStart(2, '0');
+                                    return <option key={h} value={h}>{h}시</option>;
+                                  })}
+                                </select>
+                                <select
+                                  value={scheduledMinute}
+                                  onChange={(e) => setScheduledMinute(e.target.value)}
+                                  className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
+                                  required
+                                >
+                                  {Array.from({ length: 60 }, (_, i) => {
+                                    const m = i.toString().padStart(2, '0');
+                                    return <option key={m} value={m}>{m}분</option>;
+                                  })}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex justify-start">
                         <button
                           type="submit"
@@ -1347,187 +1475,6 @@ export default function Home() {
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                           </svg>
-                          <span>발송</span>
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              ) : adminTab === 'scheduled' ? (
-                /* 미션 예약 (예약 발송 등록) */
-                <div className="space-y-6 max-w-4xl">
-                  <div>
-                    <h1 className="text-2xl font-black text-[#202124] dark:text-white tracking-tight">미션 예약</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">지정된 날짜와 시간에 특정 유저에게 메일을 예약 발송합니다.</p>
-                  </div>
-                  
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 md:p-8">
-                    <form onSubmit={async (e) => {
-                      e.preventDefault();
-                      if (!scheduledTo || !scheduledSubject || !scheduledBody || !scheduledDate || !scheduledHour || !scheduledMinute) {
-                        triggerToast("모든 항목을 입력해주세요.", "입력 오류");
-                        return;
-                      }
-                      
-                      // 한국 시간대(+09:00) 기준으로 날짜 객체를 생성한 후 ISO로 변환하여 시간대 오차 방지
-                      const scheduleDateStr = new Date(`${scheduledDate}T${scheduledHour}:${scheduledMinute}:00+09:00`).toISOString();
-                      const targetUser = allUsers.find(u => u.virtualEmail === scheduledTo);
-                      const receiverName = targetUser ? targetUser.name : 'Unknown';
-
-                      const success = await createScheduledEmail(
-                        scheduledTo,
-                        receiverName,
-                        scheduledSubject,
-                        scheduledBody,
-                        scheduleDateStr,
-                        scheduledTimeoutLimit,
-                        scheduledForceTimeout
-                      );
-                      
-                      if (success) {
-                        triggerToast("예약 메일이 등록되었습니다.", "예약 완료");
-                        const freshKst = getKstNow();
-                        setScheduledTo('');
-                        setScheduledSubject('');
-                        setScheduledBody('');
-                        setScheduledDate(freshKst.date);
-                        setScheduledHour(freshKst.hour);
-                        setScheduledMinute(freshKst.minute);
-                        setScheduledTimeoutLimit(false);
-                        setScheduledForceTimeout(false);
-                        setAdminTab('scheduled-manage');
-                        setSelectedEmail(null);
-                      } else {
-                        triggerToast("예약 등록에 실패했습니다. (DB 오류)", "예약 실패");
-                      }
-                    }} className="space-y-6">
-                      
-                      {/* 수신자 */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">발송 대상</label>
-                        <select
-                          value={scheduledTo}
-                          onChange={(e) => setScheduledTo(e.target.value)}
-                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
-                          required
-                        >
-                          <option value="">발송 대상 유저 선택</option>
-                          {allUsers.filter(u => u.role !== 'admin').map(u => (
-                            <option key={u.id} value={u.virtualEmail}>{u.name} ({u.virtualEmail})</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* 예약 날짜 */}
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 날짜</label>
-                          <input
-                            type="date"
-                            value={scheduledDate}
-                            onChange={(e) => setScheduledDate(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
-                            required
-                          />
-                        </div>
-
-                        {/* 예약 시간 */}
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">예약 시간 (24시간 형식)</label>
-                          <div className="flex space-x-2">
-                            <select
-                              value={scheduledHour}
-                              onChange={(e) => setScheduledHour(e.target.value)}
-                              className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
-                              required
-                            >
-                              {Array.from({ length: 24 }, (_, i) => {
-                                const h = i.toString().padStart(2, '0');
-                                return <option key={h} value={h}>{h}시</option>;
-                              })}
-                            </select>
-                            <select
-                              value={scheduledMinute}
-                              onChange={(e) => setScheduledMinute(e.target.value)}
-                              className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
-                              required
-                            >
-                              {Array.from({ length: 60 }, (_, i) => {
-                                const m = i.toString().padStart(2, '0');
-                                return <option key={m} value={m}>{m}분</option>;
-                              })}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 5분 제한 옵션 */}
-                      <div className="space-y-2 py-2 border-y border-slate-100 dark:border-slate-800 my-2">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            id="timeout_limit"
-                            type="checkbox"
-                            checked={scheduledTimeoutLimit}
-                            onChange={(e) => {
-                              setScheduledTimeoutLimit(e.target.checked);
-                              if (!e.target.checked) setScheduledForceTimeout(false);
-                            }}
-                            className="w-4 h-4 text-blue-600 border-slate-350 rounded focus:ring-blue-500"
-                          />
-                          <label htmlFor="timeout_limit" className="text-sm font-semibold text-slate-750 dark:text-slate-300 cursor-pointer">
-                            5분 제한 미션으로 설정 (발송 후 5분 내에 읽지 않으면 만료 처리)
-                          </label>
-                        </div>
-                        {scheduledTimeoutLimit && (
-                          <div className="flex items-center space-x-2 pl-6 transition-all duration-300">
-                            <input
-                              id="force_timeout"
-                              type="checkbox"
-                              checked={scheduledForceTimeout}
-                              onChange={(e) => setScheduledForceTimeout(e.target.checked)}
-                              className="w-4 h-4 text-red-600 border-slate-350 rounded focus:ring-red-500"
-                            />
-                            <label htmlFor="force_timeout" className="text-xs font-medium text-red-600 dark:text-red-400 cursor-pointer">
-                              ⚡ 강제 만료 적용 (유저 설정을 무시하고 무조건 5분 제한 적용)
-                            </label>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 제목 */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">제목</label>
-                        <input
-                          type="text"
-                          value={scheduledSubject}
-                          onChange={(e) => setScheduledSubject(e.target.value)}
-                          placeholder="이메일 제목을 입력하세요"
-                          className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm dark:bg-slate-800 text-[#202124] dark:text-white"
-                          required
-                        />
-                      </div>
-
-                      {/* 본문 */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">WRITE MESSAGE (본문 내용)</label>
-                        <textarea
-                          value={scheduledBody}
-                          onChange={(e) => setScheduledBody(e.target.value)}
-                          placeholder="본문 내용을 자유롭게 작성하세요..."
-                          className="w-full h-40 p-4 border border-slate-300 dark:border-slate-700 rounded-2xl focus:outline-none focus:ring-1 focus:ring-slate-400 text-[14px] dark:bg-slate-800 text-[#202124] dark:text-slate-100 placeholder-slate-400"
-                          required
-                        />
-                      </div>
-
-                      <div className="flex justify-start">
-                        <button
-                          type="submit"
-                          className="px-6 py-2 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white border border-slate-300 dark:border-slate-700 font-bold rounded-full text-xs transition-all shadow-none flex items-center gap-1.5"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>예약 등록</span>
                         </button>
                       </div>
                     </form>
@@ -1802,35 +1749,12 @@ export default function Home() {
               </nav>
             </div>
 
-            {/* 사이드바 최하단: 체험 가이드 모달 트리거 및 치트 제어 리셋 버튼 (모노크롬화 및 100% 한글화) */}
-            <div className="hidden md:block space-y-2 p-1.5 pb-4">
-              <button 
-                onClick={() => setIsCourseGuideOpen(true)}
-                className="w-full py-2 bg-white dark:bg-slate-900 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-full text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-800 shadow-sm"
-              >
-                <span>체험 코스 가이드</span>
-              </button>
-
+            <div className="hidden md:block p-1.5 pb-4">
               <div className="text-[9px] text-slate-400 px-3 py-1 space-y-0.5">
                 <div>로그인 계정:</div>
                 <div className="text-[#1f1f1f] dark:text-white truncate font-semibold">{currentUser.name}</div>
                 <div className="truncate text-slate-450 font-light">{currentUser.virtualEmail}</div>
               </div>
-
-              {/* 강제 리셋 은은한 점선 버튼 */}
-              <button
-                onClick={async () => {
-                  const updated = await resetExperienceCourse(currentUser.virtualEmail);
-                  if (updated) {
-                    setCurrentUser(updated);
-                    setEmails(await getLocalEmails(currentUser.virtualEmail));
-                    triggerToast("5회 체험 코스가 초기화되었습니다.", "코스 리셋 완료");
-                  }
-                }}
-                className="w-full py-1.5 border border-dashed border-slate-300 dark:border-slate-800 hover:border-amber-500 hover:text-amber-500 text-slate-400 rounded-full text-[9px] font-semibold transition-all text-center"
-              >
-                ⚡ 체험 코스 리셋 (개발자용)
-              </button>
             </div>
           </aside>
 
@@ -1846,17 +1770,6 @@ export default function Home() {
               </div>
               
               <div className="flex items-center space-x-4">
-                {/* 헤더 체험 코스 가이드 트리거 (지메일 스타일 Monochrome 버튼) */}
-                <button
-                  onClick={() => setIsCourseGuideOpen(true)}
-                  className="px-3 py-1.5 bg-[#f1f3f4] hover:bg-[#e8eaed] dark:bg-slate-800 dark:hover:bg-slate-700 text-[#202124] dark:text-white text-xs font-bold rounded-full border border-slate-300 dark:border-slate-700 transition-all flex items-center gap-1.5 shadow-none"
-                >
-                  <span>가이드 팝업</span>
-                  <span className="w-3.5 h-3.5 bg-slate-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">?</span>
-                </button>
-
-                <span className="text-xs text-slate-300">|</span>
-                
                 <button
                   onClick={handleLogout}
                   className="text-xs font-bold text-slate-400 hover:text-red-500 transition-all"
@@ -2261,7 +2174,7 @@ export default function Home() {
                 </div>
               ) : userTab === 'settings' ? (
                 /* 설정 화면 */
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 max-w-lg mx-auto w-full">
+                <div className="flex-1 overflow-y-hidden p-4 md:p-8 space-y-8 max-w-lg mx-auto w-full">
                   <div>
                     <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
                     <p className="text-sm text-slate-400 mt-1">개인 편지함 수신 시간 및 프로필을 변경합니다.</p>
@@ -2375,22 +2288,6 @@ export default function Home() {
                     <span className="text-[10px] text-slate-400 font-medium">Local Simulation Inbox</span>
                   </div>
                   
-                  {/* 🔍 임시 디버그 패널 - 실제 메일 속성 확인용 */}
-                  {userTab === 'inbox' && emails.filter((e: any) => e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase()).length > 0 && (
-                    <div className="mx-4 mt-2 mb-1 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-300 rounded-xl text-[10px] font-mono space-y-1">
-                      <div className="font-bold text-yellow-700">🔍 DEBUG: 수신 메일 속성</div>
-                      {emails.filter((e: any) => e.receiver?.toLowerCase() === currentUser.virtualEmail?.toLowerCase()).slice(0, 3).map((e: any) => {
-                        const minsAgo = ((Date.now() - new Date(e.createdAt).getTime()) / 60000).toFixed(1);
-                        return (
-                          <div key={e.id} className="text-yellow-800 dark:text-yellow-300 border-t border-yellow-200 pt-1">
-                            <span className="font-bold">[{e.subject?.substring(0, 20)}]</span>{' '}
-                            status={e.status} | isTimeoutLimit={String(e.isTimeoutLimit)} | isForceTimeout={String(e.isForceTimeout)} | sender={e.sender?.split('@')[0]} | {minsAgo}분 전
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
                   <div className="flex-1 overflow-y-auto">
                     {userFiltered.length === 0 ? (
                       <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
